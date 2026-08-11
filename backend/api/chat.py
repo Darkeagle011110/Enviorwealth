@@ -110,6 +110,10 @@ async def chat_endpoint(request: ChatRequest, req: Request):
     if request.user_id:
         initial_state["user_id"] = request.user_id
 
+    # Clear transient UI actions from previous turns to prevent recurring popups
+    if "ui_state" in initial_state and isinstance(initial_state["ui_state"], dict):
+        initial_state["ui_state"].pop("action", None)
+
     # Append user message
     initial_state["messages"].append({"role": "user", "content": request.message})
     initial_state["turn_count"] = initial_state.get("turn_count", 0) + 1
