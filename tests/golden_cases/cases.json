@@ -1,0 +1,618 @@
+[
+  {
+    "id": "TC001",
+    "description": "Hard knockout — recorded forest land, owned",
+    "input": {
+      "area_ha": 15, "tenure_type": "owned", "land_legal_class": "recorded_forest",
+      "existing_tree_cover_pct": 40, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_knockout_gate": "gate_1",
+    "expected_flags": []
+  },
+  {
+    "id": "TC002",
+    "description": "Hard knockout — disputed tenure",
+    "input": {
+      "area_ha": 30, "tenure_type": "disputed", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 5, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_knockout_gate": "gate_5",
+    "expected_flags": []
+  },
+  {
+    "id": "TC003",
+    "description": "Hard knockout — recent conversion (cleared 2022)",
+    "input": {
+      "area_ha": 20, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 0, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": true, "last_clearing_year": 2022,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_knockout_gate": "gate_2",
+    "expected_flags": []
+  },
+  {
+    "id": "TC004",
+    "description": "Hard knockout — planted >5 years ago",
+    "input": {
+      "area_ha": 25, "tenure_type": "owned", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 8, "planting_status": "planted_gt_5yrs",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_knockout_gate": "gate_3",
+    "expected_flags": []
+  },
+  {
+    "id": "TC005",
+    "description": "Hard knockout — double registration",
+    "input": {
+      "area_ha": 50, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "land_use_10yr_ago": "agriculture",
+      "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": true
+    },
+    "expected_verdict": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_knockout_gate": "gate_9"
+  },
+  {
+    "id": "TC006",
+    "description": "Hard knockout — legally mandated planting",
+    "input": {
+      "area_ha": 40, "tenure_type": "owned", "land_legal_class": "mined_industrial",
+      "existing_tree_cover_pct": 0, "land_use_10yr_ago": "mine",
+      "planting_status": "not_started",
+      "would_plant_anyway": true, "planting_legally_mandated": true,
+      "recent_clearing": false, "existing_scheme_registration": false
+    },
+    "expected_verdict": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_knockout_gate": "gate_4",
+    "expected_flags_contain": ["additionality_regulatory_fail"]
+  },
+  {
+    "id": "TC007",
+    "description": "Hard knockout — government tenure",
+    "input": {
+      "area_ha": 100, "tenure_type": "government", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 5, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_knockout_gate": "gate_5",
+    "expected_flags": []
+  },
+  {
+    "id": "TC008",
+    "description": "Ecological caution — grassland/scrub land",
+    "input": {
+      "area_ha": 20, "tenure_type": "owned", "land_legal_class": "grassland_scrub",
+      "existing_tree_cover_pct": 3, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "ECOLOGICAL_CAUTION",
+    "expected_flags_contain": ["ecological_caution"]
+  },
+  {
+    "id": "TC009",
+    "description": "Promising — ideal case: large owned agricultural fallow",
+    "input": {
+      "area_ha": 600, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "land_use_10yr_ago": "agriculture",
+      "planting_status": "not_started",
+      "would_plant_anyway": false, "planting_legally_mandated": false,
+      "already_profitable_without_carbon": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "fra_claim_flag": false,
+      "grazing_use": false, "planting_system": "block_plantation"
+    },
+    "expected_verdict": "PROMISING_PROCEED_FEASIBILITY",
+    "expected_flags_contain": ["permanence_commitment_required"]
+  },
+  {
+    "id": "TC010",
+    "description": "Possible needs aggregation — small owned agricultural land 8ha",
+    "input": {
+      "area_ha": 8, "tenure_type": "owned", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 5, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "fra_claim_flag": false,
+      "grazing_use": false, "planting_system": "agroforestry"
+    },
+    "expected_verdict": "POSSIBLE_NEEDS_AGGREGATION",
+    "expected_flags_contain": ["aggregation_required"]
+  },
+  {
+    "id": "TC011",
+    "description": "Unlikely economic — very small parcel 1ha",
+    "input": {
+      "area_ha": 1, "tenure_type": "owned", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 2, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "UNLIKELY_ECONOMIC",
+    "expected_flags_contain": ["scale_too_small_likely_uneconomic"]
+  },
+  {
+    "id": "TC012",
+    "description": "Insufficient info — no tenure provided",
+    "input": {
+      "area_ha": 20, "tenure_type": null, "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 4, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "INSUFFICIENT_INFORMATION"
+  },
+  {
+    "id": "TC013",
+    "description": "Insufficient info — no area provided",
+    "input": {
+      "area_ha": null, "tenure_type": "owned", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 5, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "INSUFFICIENT_INFORMATION"
+  },
+  {
+    "id": "TC014",
+    "description": "Insufficient info — no planting status",
+    "input": {
+      "area_ha": 25, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 4, "planting_status": null,
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "INSUFFICIENT_INFORMATION"
+  },
+  {
+    "id": "TC015",
+    "description": "Insufficient info — no recent clearing answer",
+    "input": {
+      "area_ha": 25, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 4, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": null,
+      "last_clearing_year": null, "existing_scheme_registration": false
+    },
+    "expected_verdict": "INSUFFICIENT_INFORMATION"
+  },
+  {
+    "id": "TC016",
+    "description": "Flag — high tree cover (18%) on block plantation plan",
+    "input": {
+      "area_ha": 30, "tenure_type": "owned", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 18, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "planting_system": "block_plantation"
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_flags_contain": ["forest_status_risk"]
+  },
+  {
+    "id": "TC017",
+    "description": "Flag — vintage risk (planted 2-5 years ago)",
+    "input": {
+      "area_ha": 50, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 5, "planting_status": "planted_2_5yrs",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_flags_contain": ["vintage_risk"]
+  },
+  {
+    "id": "TC018",
+    "description": "Flag — additionality concern (would plant anyway)",
+    "input": {
+      "area_ha": 40, "tenure_type": "owned", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 5, "planting_status": "not_started",
+      "would_plant_anyway": true, "planting_legally_mandated": false,
+      "already_profitable_without_carbon": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_flags_contain": ["additionality_financial_risk"]
+  },
+  {
+    "id": "TC019",
+    "description": "Flag — short lease remaining (10 years)",
+    "input": {
+      "area_ha": 50, "tenure_type": "leased", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 3, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "lease_years_remaining": 10
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_flags_contain": ["tenure_lease_short"]
+  },
+  {
+    "id": "TC020",
+    "description": "Flag — FRA claim on land",
+    "input": {
+      "area_ha": 60, "tenure_type": "owned", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 4, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "fra_claim_flag": true
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_flags_contain": ["fra_claim_risk"]
+  },
+  {
+    "id": "TC021",
+    "description": "Flag — grazing use (leakage and consent risk)",
+    "input": {
+      "area_ha": 35, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 5, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "grazing_use": true
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_flags_contain": ["grazing_displacement_risk"]
+  },
+  {
+    "id": "TC022",
+    "description": "Promising — mined industrial land (clean baseline), large scale",
+    "input": {
+      "area_ha": 600, "tenure_type": "owned", "land_legal_class": "mined_industrial",
+      "existing_tree_cover_pct": 0, "land_use_10yr_ago": "mine",
+      "planting_status": "not_started",
+      "would_plant_anyway": false, "planting_legally_mandated": false,
+      "already_profitable_without_carbon": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "grazing_use": false
+    },
+    "expected_verdict": "PROMISING_PROCEED_FEASIBILITY"
+  },
+  {
+    "id": "TC023",
+    "description": "Possible aggregation — coastal land (mangrove potential)",
+    "input": {
+      "area_ha": 12, "tenure_type": "owned", "land_legal_class": "coastal",
+      "existing_tree_cover_pct": 5, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "planting_system": "mangrove"
+    },
+    "expected_verdict": "POSSIBLE_NEEDS_AGGREGATION"
+  },
+  {
+    "id": "TC024",
+    "description": "Short-circuit test — gate 1 fails, gates 2-10 not evaluated",
+    "input": {
+      "area_ha": 50, "tenure_type": "owned", "land_legal_class": "recorded_forest",
+      "existing_tree_cover_pct": 40, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_knockout_gate": "gate_1",
+    "max_gates_evaluated": 1
+  },
+  {
+    "id": "TC025",
+    "description": "Short-circuit test — gate 2 fails (recent conversion), gate 3+ not evaluated",
+    "input": {
+      "area_ha": 50, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": true,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_knockout_gate": "gate_2",
+    "max_gates_evaluated": 2
+  },
+  {
+    "id": "TC026",
+    "description": "Community land — complex but possible",
+    "input": {
+      "area_ha": 40, "tenure_type": "community", "land_legal_class": "community",
+      "existing_tree_cover_pct": 4, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_flags_contain": ["tenure_community_complexity"]
+  },
+  {
+    "id": "TC027",
+    "description": "Bamboo plantation — fast sequestration potential, large scale",
+    "input": {
+      "area_ha": 600, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 2, "land_use_10yr_ago": "agriculture",
+      "planting_status": "planned_this_year",
+      "would_plant_anyway": false, "planting_legally_mandated": false,
+      "already_profitable_without_carbon": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "grazing_use": false,
+      "planting_system": "bamboo"
+    },
+    "expected_verdict": "PROMISING_PROCEED_FEASIBILITY"
+  },
+  {
+    "id": "TC028",
+    "description": "Already commercially profitable — additionality flag",
+    "input": {
+      "area_ha": 80, "tenure_type": "owned", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 5, "planting_status": "not_started",
+      "would_plant_anyway": true, "planting_legally_mandated": false,
+      "already_profitable_without_carbon": true, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_flags_contain": ["additionality_commercial_risk"]
+  },
+  {
+    "id": "TC029",
+    "description": "Canopy above 15% threshold (16%) — forest_status_risk flag (boundary test)",
+    "input": {
+      "area_ha": 30, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 16, "land_use_10yr_ago": "agriculture",
+      "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "planting_system": "block_plantation"
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_flags_contain": ["forest_status_risk"],
+    "boundary_test": true
+  },
+  {
+    "id": "TC030",
+    "description": "Canopy exactly at 15% — equal to threshold, NOT above — no forest flag",
+    "input": {
+      "area_ha": 30, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 15, "land_use_10yr_ago": "agriculture",
+      "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "planting_system": "block_plantation"
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_flags_not_contain": ["forest_status_risk"],
+    "boundary_test": true
+  },
+  {
+    "id": "TC031",
+    "description": "Area exactly at standalone feasible (500ha) — should be promising",
+    "input": {
+      "area_ha": 500, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "planting_status": "not_started",
+      "would_plant_anyway": false, "planting_legally_mandated": false,
+      "already_profitable_without_carbon": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "grazing_use": false
+    },
+    "expected_verdict": "PROMISING_PROCEED_FEASIBILITY",
+    "boundary_test": true
+  },
+  {
+    "id": "TC032",
+    "description": "Area below 2ha — unlikely economic (INSUFFICIENT_INFORMATION if no clearing answer; use area=1.5)",
+    "input": {
+      "area_ha": 1.5, "tenure_type": "owned", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 3, "land_use_10yr_ago": "agriculture",
+      "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "UNLIKELY_ECONOMIC",
+    "boundary_test": true
+  },
+  {
+    "id": "TC033",
+    "description": "Planted this year — should not fail gate 3",
+    "input": {
+      "area_ha": 50, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "planting_status": "planned_this_year",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL"
+  },
+  {
+    "id": "TC034",
+    "description": "No additionality info — insufficient info at gate 4",
+    "input": {
+      "area_ha": 50, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "planting_status": "not_started",
+      "would_plant_anyway": null, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "INSUFFICIENT_INFORMATION"
+  },
+  {
+    "id": "TC035",
+    "description": "Leased land with 35 years remaining — flag but not knockout",
+    "input": {
+      "area_ha": 60, "tenure_type": "leased", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 4, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "lease_years_remaining": 35
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_flags_contain": ["tenure_lease_review_needed"]
+  },
+  {
+    "id": "TC036",
+    "description": "Agroforestry on small land — correct yield key used",
+    "input": {
+      "area_ha": 10, "tenure_type": "owned", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 5, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "planting_system": "agroforestry"
+    },
+    "expected_verdict": "POSSIBLE_NEEDS_AGGREGATION",
+    "expected_indicative_numbers": true
+  },
+  {
+    "id": "TC037",
+    "description": "Unknown planting system — falls back to mixed_native yield",
+    "input": {
+      "area_ha": 50, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "planting_system": "unknown"
+    },
+    "expected_indicative_numbers": true
+  },
+  {
+    "id": "TC038",
+    "description": "No tree cover info — insufficient for gate 1 if also no land_use_10yr_ago",
+    "input": {
+      "area_ha": 50, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": null, "land_use_10yr_ago": null,
+      "planting_status": "not_started", "would_plant_anyway": false,
+      "recent_clearing": false, "existing_scheme_registration": false
+    },
+    "expected_verdict": "INSUFFICIENT_INFORMATION"
+  },
+  {
+    "id": "TC039",
+    "description": "Urban land — small scale, non-carbon value note expected",
+    "input": {
+      "area_ha": 0.5, "tenure_type": "owned", "land_legal_class": "urban",
+      "existing_tree_cover_pct": 5, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "UNLIKELY_ECONOMIC"
+  },
+  {
+    "id": "TC040",
+    "description": "Multiple flags — should still produce a verdict, not error",
+    "input": {
+      "area_ha": 15, "tenure_type": "leased", "land_legal_class": "revenue_agricultural",
+      "existing_tree_cover_pct": 16, "planting_status": "planted_2_5yrs",
+      "would_plant_anyway": true, "planting_legally_mandated": false,
+      "already_profitable_without_carbon": true, "recent_clearing": false,
+      "existing_scheme_registration": false, "lease_years_remaining": 8,
+      "grazing_use": true, "fra_claim_flag": false
+    },
+    "expected_verdict_not": "NOT_ELIGIBLE_STRUCTURAL",
+    "note": "Multiple flags — produce a flagged verdict, not an error"
+  },
+  {
+    "id": "TC041",
+    "description": "Verdict has disclaimer present",
+    "input": {
+      "area_ha": 50, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_disclaimer_present": true
+  },
+  {
+    "id": "TC042",
+    "description": "Revenue estimates must be ranges (no point estimates)",
+    "input": {
+      "area_ha": 30, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "land_use_10yr_ago": "agriculture",
+      "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "planting_system": "unknown"
+    },
+    "expected_indicative_is_range": true,
+    "note": "Low and high must differ — never a point estimate"
+  },
+  {
+    "id": "TC043",
+    "description": "Next steps must be present for promising verdict",
+    "input": {
+      "area_ha": 600, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 2, "planting_status": "not_started",
+      "would_plant_anyway": false, "planting_legally_mandated": false,
+      "already_profitable_without_carbon": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "grazing_use": false
+    },
+    "expected_verdict": "PROMISING_PROCEED_FEASIBILITY",
+    "expected_next_steps_non_empty": true
+  },
+  {
+    "id": "TC044",
+    "description": "Questions to ask developer present for possible/promising",
+    "input": {
+      "area_ha": 50, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 4, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_developer_questions_non_empty": true
+  },
+  {
+    "id": "TC045",
+    "description": "Ecological caution — never shows indicative carbon numbers",
+    "input": {
+      "area_ha": 40, "tenure_type": "owned", "land_legal_class": "grassland_scrub",
+      "existing_tree_cover_pct": 2, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "ECOLOGICAL_CAUTION",
+    "expected_indicative_numbers": false
+  },
+  {
+    "id": "TC046",
+    "description": "Not_eligible_structural — alternatives list always present",
+    "input": {
+      "area_ha": 30, "tenure_type": "disputed", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_alternatives_non_empty": true
+  },
+  {
+    "id": "TC047",
+    "description": "What_we_could_not_check always present in verdict",
+    "input": {
+      "area_ha": 50, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_what_we_could_not_check_non_empty": true
+  },
+  {
+    "id": "TC048",
+    "description": "Indicative revenue_low < revenue_high always",
+    "input": {
+      "area_ha": 100, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "land_use_10yr_ago": "agriculture",
+      "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "planting_system": "block_plantation"
+    },
+    "expected_indicative_low_lt_high": true
+  },
+  {
+    "id": "TC049",
+    "description": "First issuance years are reasonable (3-8 years)",
+    "input": {
+      "area_ha": 80, "tenure_type": "owned", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false, "planting_system": "agroforestry"
+    },
+    "expected_first_issuance_min_ge": 3,
+    "expected_first_issuance_max_le": 10
+  },
+  {
+    "id": "TC050",
+    "description": "Structural knockout never has indicative numbers",
+    "input": {
+      "area_ha": 50, "tenure_type": "disputed", "land_legal_class": "revenue_fallow",
+      "existing_tree_cover_pct": 3, "planting_status": "not_started",
+      "would_plant_anyway": false, "recent_clearing": false,
+      "existing_scheme_registration": false
+    },
+    "expected_verdict": "NOT_ELIGIBLE_STRUCTURAL",
+    "expected_indicative_numbers": false
+  }
+]

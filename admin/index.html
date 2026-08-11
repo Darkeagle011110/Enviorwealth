@@ -1,0 +1,1835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EnviroWealth — Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── CSS Reset & Design Tokens ────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base:       #0a0f1e;
+      --bg-surface:    #0f172a;
+      --bg-card:       rgba(15, 23, 42, 0.8);
+      --bg-hover:      rgba(16, 185, 129, 0.08);
+      --border:        rgba(255,255,255,0.07);
+      --border-accent: rgba(16, 185, 129, 0.4);
+      --text-primary:  #f1f5f9;
+      --text-secondary:#94a3b8;
+      --text-muted:    #475569;
+      --accent:        #10b981;
+      --accent-glow:   rgba(16,185,129,0.3);
+      --accent-dark:   #059669;
+      --warn:          #f59e0b;
+      --error:         #ef4444;
+      --success:       #10b981;
+      --radius:        12px;
+      --radius-sm:     8px;
+      --shadow:        0 4px 24px rgba(0,0,0,0.4);
+      --transition:    0.2s ease;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ───────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 240px;
+      min-height: 100vh;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    .logo-text { font-size: 13px; font-weight: 600; line-height: 1.3; }
+    .logo-sub  { font-size: 10px; color: var(--text-muted); font-weight: 400; }
+
+    .sidebar-nav { flex: 1; padding: 12px 8px; }
+
+    .nav-section-label {
+      font-size: 10px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 8px 12px 4px;
+    }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: var(--radius-sm);
+      cursor: pointer; font-size: 13px; font-weight: 500;
+      color: var(--text-secondary); transition: var(--transition);
+      margin-bottom: 2px;
+    }
+    .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .nav-item.active {
+      background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05));
+      color: var(--accent);
+      border: 1px solid rgba(16,185,129,0.2);
+    }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .sidebar-status {
+      padding: 14px 16px; border-top: 1px solid var(--border);
+      font-size: 11px;
+    }
+    .status-dot {
+      display: inline-block; width: 7px; height: 7px;
+      border-radius: 50%; background: var(--success);
+      box-shadow: 0 0 8px var(--accent); margin-right: 6px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ── Main Content ──────────────────────────────────────────────────────── */
+    .main {
+      flex: 1; overflow-y: auto;
+      background: var(--bg-base);
+      padding: 28px 32px;
+    }
+
+    .page-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    .page-title { font-size: 22px; font-weight: 700; }
+    .page-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+    .api-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; padding: 4px 10px;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 20px; color: var(--accent);
+    }
+
+    /* ── Grid / Cards ──────────────────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-full { display: grid; grid-template-columns: 1fr; gap: 20px; }
+
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+    }
+    .card:hover { border-color: rgba(16,185,129,0.15); }
+
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .card-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .card-icon { font-size: 18px; }
+
+    /* ── Form Controls ─────────────────────────────────────────────────────── */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block; font-size: 12px; font-weight: 500;
+      color: var(--text-secondary); margin-bottom: 7px; letter-spacing: 0.02em;
+    }
+    .form-label .required { color: var(--error); margin-left: 3px; }
+
+    .form-select, .form-input {
+      width: 100%; padding: 10px 14px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 13px; font-family: 'Inter', sans-serif;
+      transition: var(--transition); outline: none;
+      appearance: none;
+    }
+    .form-select:focus, .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    option {
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+    }
+    .select-wrapper { position: relative; }
+    .select-wrapper::after {
+      content: '▾'; position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%); color: var(--text-muted); pointer-events: none;
+      font-size: 12px;
+    }
+
+    .input-group { display: flex; gap: 8px; }
+    .input-group .form-input { flex: 1; }
+
+    .form-input[type="password"] { font-family: 'JetBrains Mono', monospace; letter-spacing: 2px; }
+
+    .eye-btn {
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); cursor: pointer; color: var(--text-secondary);
+      transition: var(--transition);
+    }
+    .eye-btn:hover { color: var(--text-primary); border-color: var(--accent); }
+
+    /* ── Toggle ────────────────────────────────────────────────────────────── */
+    .toggle-group {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .toggle-btn {
+      flex: 1; padding: 9px 16px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); cursor: pointer;
+      font-size: 12px; font-weight: 500; transition: var(--transition);
+      background: transparent; color: var(--text-secondary);
+    }
+    .toggle-btn.active {
+      background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.08));
+      border-color: var(--accent); color: var(--accent);
+    }
+
+    /* ── Buttons ───────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: var(--transition); border: none; outline: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--accent-glow); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+    .btn-danger {
+      background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);
+      color: var(--error);
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* ── Health Check Result ───────────────────────────────────────────────── */
+    .health-result {
+      padding: 12px 16px; border-radius: var(--radius-sm);
+      font-size: 13px; font-family: 'JetBrains Mono', monospace;
+      margin-top: 16px; display: none;
+    }
+    .health-result.ok {
+      background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
+      color: var(--success); display: flex; align-items: center; gap: 10px;
+    }
+    .health-result.error {
+      background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+      color: var(--error); display: flex; align-items: center; gap: 10px;
+    }
+    .health-result.loading {
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      color: var(--text-secondary); display: flex; align-items: center; gap: 10px;
+    }
+
+    /* ── Status Badges ─────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 500;
+    }
+    .badge-success { background: rgba(16,185,129,0.15); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+    .badge-warn { background: rgba(245,158,11,0.15); color: var(--warn); border: 1px solid rgba(245,158,11,0.3); }
+    .badge-error { background: rgba(239,68,68,0.15); color: var(--error); border: 1px solid rgba(239,68,68,0.3); }
+    .badge-muted { background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* ── Table ─────────────────────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left; padding: 10px 14px;
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .td-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary); }
+
+    /* ── File Upload ───────────────────────────────────────────────────────── */
+    .upload-zone {
+      border: 2px dashed rgba(16,185,129,0.3);
+      border-radius: var(--radius);
+      padding: 32px; text-align: center;
+      cursor: pointer; transition: var(--transition);
+      background: rgba(16,185,129,0.03);
+    }
+    .upload-zone:hover {
+      border-color: var(--accent);
+      background: rgba(16,185,129,0.07);
+    }
+    .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(16,185,129,0.12);
+    }
+    .upload-icon { font-size: 32px; margin-bottom: 12px; }
+    .upload-text { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+    .upload-hint { font-size: 12px; color: var(--text-muted); }
+
+    /* ── System Health ─────────────────────────────────────────────────────── */
+    .health-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .health-item {
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 16px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .health-indicator {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .hi-ok { background: rgba(16,185,129,0.15); }
+    .hi-warn { background: rgba(245,158,11,0.15); }
+    .hi-err { background: rgba(239,68,68,0.15); }
+    .health-label { font-size: 12px; color: var(--text-secondary); }
+    .health-value { font-size: 13px; font-weight: 600; }
+
+    /* ── Active Provider Banner ────────────────────────────────────────────── */
+    .provider-banner {
+      background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.05));
+      border: 1px solid rgba(16,185,129,0.25);
+      border-radius: var(--radius); padding: 14px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .provider-banner-left { display: flex; align-items: center; gap: 12px; }
+    .provider-avatar {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: rgba(16,185,129,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .provider-label { font-size: 11px; color: var(--text-muted); }
+    .provider-name { font-size: 14px; font-weight: 600; }
+
+    /* ── Tabs ──────────────────────────────────────────────────────────────── */
+    .tab-bar {
+      display: flex; gap: 4px; padding: 4px;
+      background: rgba(255,255,255,0.04); border-radius: var(--radius-sm);
+      margin-bottom: 24px; width: fit-content;
+    }
+    .tab {
+      padding: 7px 16px; border-radius: 6px; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: var(--transition); color: var(--text-secondary);
+    }
+    .tab.active { background: rgba(16,185,129,0.15); color: var(--accent); }
+
+    /* ── Divider ───────────────────────────────────────────────────────────── */
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    /* ── Toast ─────────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      padding: 12px 20px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500; z-index: 9999;
+      display: none; align-items: center; gap: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn { from{transform:translateX(120%)} to{transform:translateX(0)} }
+    .toast-ok { background: rgba(16,185,129,0.95); color: #fff; }
+    .toast-err { background: rgba(239,68,68,0.95); color: #fff; }
+
+    /* ── Spinner ───────────────────────────────────────────────────────────── */
+    .spinner {
+      width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Page sections (shown/hidden) ─────────────────────────────────────── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── Modal ─────────────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      display: none; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px; width: 480px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      animation: fadeUp 0.2s ease;
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .modal-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+
+    /* ── Progress bar ──────────────────────────────────────────────────────── */
+    .progress-bar {
+      height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px;
+      overflow: hidden; margin-top: 8px;
+    }
+    .progress-fill {
+      height: 100%; background: linear-gradient(90deg, var(--accent), #34d399);
+      border-radius: 2px; transition: width 0.4s ease;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Sidebar ──────────────────────────────────────────────────────────── -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🌿</div>
+    <div>
+      <div class="logo-text">EnviroWealth</div>
+      <div class="logo-sub">Admin Panel</div>
+    </div>
+  </div>
+
+  <div class="sidebar-nav">
+    <div class="nav-section-label">Business</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="navigate('leads')">
+      <span class="nav-icon">👥</span> Leads CRM
+    </div>
+
+    <div class="nav-section-label" style="margin-top:12px">Configuration</div>
+    <div class="nav-item" onclick="navigate('llm')">
+      <span class="nav-icon">🤖</span> LLM Provider
+    </div>
+    <div class="nav-item" onclick="navigate('docs')">
+      <span class="nav-icon">📄</span> Document Corpus
+    </div>
+    <div class="nav-item" onclick="navigate('geo')">
+      <span class="nav-icon">🌍</span> Geospatial Config
+    </div>
+    <div class="nav-item" onclick="navigate('channels')">
+      <span class="nav-icon">💬</span> Channels &amp; Loc
+    </div>
+    <div class="nav-section-label" style="margin-top:12px">Monitoring</div>
+    <div class="nav-item" onclick="navigate('health')">
+      <span class="nav-icon">💚</span> System Health
+    </div>
+    <div class="nav-section-label" style="margin-top:12px">Account</div>
+    <div class="nav-item" onclick="logout()">
+      <span class="nav-icon">🚪</span> Logout
+    </div>
+  </div>
+
+  <div class="sidebar-status">
+    <span class="status-dot"></span>
+    <span style="color:var(--text-secondary)">API Connected</span>
+    <div style="margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)" id="api-url">http://localhost:8000</div>
+  </div>
+</nav>
+
+<!-- ─── Main Content ─────────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- ── Dashboard Page ───────────────────────────────────────────────────── -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div>
+        <div class="page-title">📊 Business Dashboard</div>
+        <div class="page-subtitle">Real-time KPI metrics and conversion tracking</div>
+      </div>
+    </div>
+    
+    <div class="grid-2" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+      <div class="card" style="padding: 16px;">
+        <div class="form-label">Total Users</div>
+        <div style="font-size: 24px; font-weight: 700; color: #fff;" id="kpi-users">--</div>
+      </div>
+      <div class="card" style="padding: 16px;">
+        <div class="form-label">Assessments Started</div>
+        <div style="font-size: 24px; font-weight: 700; color: #fff;" id="kpi-started">--</div>
+      </div>
+      <div class="card" style="padding: 16px;">
+        <div class="form-label">Assessments Completed</div>
+        <div style="font-size: 24px; font-weight: 700; color: #fff;" id="kpi-completed">--</div>
+      </div>
+      <div class="card" style="padding: 16px;">
+        <div class="form-label">Eligible / Promising</div>
+        <div style="font-size: 24px; font-weight: 700; color: var(--success);" id="kpi-promising">--</div>
+      </div>
+      <div class="card" style="padding: 16px;">
+        <div class="form-label">Aggregation Candidates</div>
+        <div style="font-size: 24px; font-weight: 700; color: var(--warn);" id="kpi-aggregation">--</div>
+      </div>
+      <div class="card" style="padding: 16px;">
+        <div class="form-label">Leads Generated</div>
+        <div style="font-size: 24px; font-weight: 700; color: #fff;" id="kpi-leads">--</div>
+      </div>
+      <div class="card" style="padding: 16px;">
+        <div class="form-label">Lead Conversion</div>
+        <div style="font-size: 24px; font-weight: 700; color: #fff;" id="kpi-conversion">--%</div>
+      </div>
+      <div class="card" style="padding: 16px;">
+        <div class="form-label">Avg. Completion Time</div>
+        <div style="font-size: 24px; font-weight: 700; color: #fff;" id="kpi-time">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Leads CRM Page ───────────────────────────────────────────────────── -->
+  <div class="page" id="page-leads">
+    <div class="page-header">
+      <div>
+        <div class="page-title">👥 Leads CRM</div>
+        <div class="page-subtitle">Manage and track assessment leads</div>
+      </div>
+      <button class="btn btn-secondary" onclick="fetchLeads()">
+        <span>🔄</span> Refresh
+      </button>
+    </div>
+    
+    <div class="card">
+      <div class="table-wrap">
+        <table id="leads-table">
+          <thead>
+            <tr>
+              <th>Lead</th>
+              <th>Location</th>
+              <th>Area</th>
+              <th>Verdict</th>
+              <th>Intent</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="7" style="text-align: center; color: var(--text-muted)">Loading leads...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Lead Details Modal (Slide-over) -->
+  <div id="lead-modal" style="display:none; position:fixed; top:0; right:0; bottom:0; width:600px; background:var(--bg-surface); border-left:1px solid var(--border); box-shadow: -4px 0 24px rgba(0,0,0,0.5); z-index:100; padding: 32px; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+      <h2 id="modal-lead-name">Lead Details</h2>
+      <button onclick="document.getElementById('lead-modal').style.display='none'" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
+    </div>
+    
+    <div class="grid-2" style="margin-bottom: 24px;">
+      <div>
+        <div class="form-label">Status</div>
+        <select class="form-select" id="modal-status" onchange="updateLeadStatus()">
+          <option value="new">New</option>
+          <option value="contacted">Contacted</option>
+          <option value="qualified">Qualified</option>
+          <option value="disqualified">Disqualified</option>
+        </select>
+      </div>
+      <div>
+        <div class="form-label">Assigned To</div>
+        <select class="form-select" id="modal-assigned">
+          <option value="unassigned">Unassigned</option>
+          <option value="sales1">Sales Agent 1</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-title">Personal Information</div>
+      <div id="modal-personal-info" class="td-mono" style="margin-top:8px;"></div>
+    </div>
+    
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-title">Land Information &amp; Verdict</div>
+      <div id="modal-land-info" class="td-mono" style="margin-top:8px;"></div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">Conversation History</div>
+      <div id="modal-conversation" style="margin-top:8px; max-height: 300px; overflow-y:auto; background:rgba(0,0,0,0.2); padding: 12px; border-radius: var(--radius-sm); font-size: 12px;"></div>
+    </div>
+  </div>
+
+  <!-- ── LLM Configuration Page ─────────────────────────────────────────── -->
+  <div class="page" id="page-llm">
+    <div class="page-header">
+      <div>
+        <div class="page-title">🤖 LLM Provider Configuration</div>
+        <div class="page-subtitle">Switch AI models in real-time — changes apply instantly for all users</div>
+      </div>
+      <span class="api-badge">POST /api/admin/llm/switch</span>
+    </div>
+
+    <!-- Current active provider banner -->
+    <div class="provider-banner" id="active-banner">
+      <div class="provider-banner-left">
+        <div class="provider-avatar" id="active-avatar">🤖</div>
+        <div>
+          <div class="provider-label">Currently Active Model</div>
+          <div class="provider-name" id="active-model-name">Loading...</div>
+        </div>
+      </div>
+      <span class="badge badge-success" id="active-badge">● Live</span>
+    </div>
+
+    <!-- Tabs: Primary / Fallback -->
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('primary', this)">Primary Model</div>
+      <div class="tab" onclick="switchTab('fallback', this)">Fallback Model</div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Config Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="card-icon">⚙️</span> Provider Settings</div>
+        </div>
+
+        <input type="hidden" id="current-tab-is-fallback" value="false" />
+
+        <div class="form-group">
+          <label class="form-label">Provider <span class="required">*</span></label>
+          <div class="select-wrapper">
+            <select class="form-select" id="sel-provider" onchange="onProviderChange()">
+              <option value="">Select provider...</option>
+              <option value="claude">Claude (Anthropic)</option>
+              <option value="openai">OpenAI GPT</option>
+              <option value="groq">Groq (Llama / Mixtral)</option>
+              <option value="gemini">Google Gemini</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Model <span class="required">*</span></label>
+          <div class="select-wrapper">
+            <select class="form-select" id="sel-model">
+              <option value="">Select provider first...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">API Key <span class="required">*</span></label>
+          <div class="input-group">
+            <input type="password" class="form-input" id="inp-apikey" placeholder="sk-..." autocomplete="new-password" />
+            <button class="eye-btn" onclick="toggleKey()" title="Show/hide key">👁️</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-secondary btn-sm" onclick="testOnly()">
+            <span>🔍</span> Test Only
+          </button>
+          <button class="btn btn-primary" id="btn-save" onclick="saveAndSwitch()">
+            <span>⚡</span> Save &amp; Switch
+          </button>
+        </div>
+
+        <div class="health-result" id="health-result"></div>
+      </div>
+
+      <!-- Fallback Config Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="card-icon">🛡️</span> Status &amp; Fallback Info</div>
+        </div>
+
+        <div id="llm-status-display">
+          <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0">
+            Loading status...
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.7">
+          <div style="margin-bottom:8px"><strong style="color:var(--text-primary)">Fallback mechanism:</strong></div>
+          <div>• If the primary model fails, the fallback activates automatically</div>
+          <div>• Health check runs before every switch — a failing model is never activated</div>
+          <div>• Configure the Fallback tab with a different provider for resilience</div>
+          <div style="margin-top:12px">
+            <button class="btn btn-secondary btn-sm" onclick="refreshStatus()">🔄 Refresh Status</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Document Corpus Page ───────────────────────────────────────────── -->
+  <div class="page" id="page-docs">
+    <div class="page-header">
+      <div>
+        <div class="page-title">📄 Document Corpus</div>
+        <div class="page-subtitle">Manage the RAG knowledge base — upload, replace, or remove documents</div>
+      </div>
+      <button class="btn btn-primary" onclick="openUploadModal()">
+        <span>⬆️</span> Upload Document
+      </button>
+    </div>
+
+    <!-- Recommended Sources Panel -->
+    <div class="card" style="margin-bottom:20px; border-left: 3px solid var(--accent)">
+      <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSources()">
+        <div style="font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px;">
+          <span>📚</span> Recommended Corpus Sources
+        </div>
+        <div id="sources-chevron" style="color:var(--text-muted); transition:transform 0.2s ease">▼</div>
+      </div>
+      <div id="recommended-sources" style="display:none; margin-top:16px;">
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Download these official documents and upload them above to build your knowledge base.</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Source Name</th>
+                <th>Description</th>
+                <th>Link</th>
+              </tr>
+            </thead>
+            <tbody id="sources-table-body">
+              <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:16px">Loading sources...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Document Title</th>
+              <th>Version</th>
+              <th>Effective Date</th>
+              <th>Jurisdiction</th>
+              <th>Chunks</th>
+              <th>Retrieved</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="docs-table-body">
+            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px">Loading documents...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Geospatial Config Page ─────────────────────────────────────────── -->
+  <div class="page" id="page-geo">
+    <div class="page-header">
+      <div>
+        <div class="page-title">🌍 Geospatial Configuration</div>
+        <div class="page-subtitle">Manage Google Earth Engine keys and ONE GeoJSON datasets</div>
+      </div>
+      <button class="btn btn-secondary" onclick="loadGeoStatus()">🔄 Refresh Status</button>
+    </div>
+
+    <!-- Validation Banner -->
+    <div id="geo-validation-banner" style="display:none; padding:16px; margin-bottom:24px; border-radius:var(--radius-sm); border:1px solid; align-items:center; gap:12px;">
+      <div style="font-size:20px" id="geo-banner-icon">⚠️</div>
+      <div>
+        <div style="font-weight:600; font-size:14px" id="geo-banner-title">Geospatial Features Incomplete</div>
+        <div style="font-size:12px; margin-top:4px" id="geo-banner-text">Please provide valid credentials to enable tree cover analysis and ONE dataset checks.</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- GEE Key Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="card-icon">🔑</span> Google Earth Engine Key</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Service Account JSON <span class="required">*</span></label>
+          <textarea class="form-input" id="inp-gee-key" rows="6" placeholder="Paste your service-account.json content here..." style="font-family:'JetBrains Mono',monospace"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn btn-primary" onclick="saveGeeKey()">
+            <span>💾</span> Save Key
+          </button>
+        </div>
+      </div>
+
+      <!-- ONE Data Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="card-icon">🗺️</span> ONE Dataset Upload</div>
+        </div>
+        <div class="upload-zone" id="one-upload-zone" onclick="document.getElementById('one-file-input').click()">
+          <div class="upload-icon">📂</div>
+          <div class="upload-text">Upload ONE GeoJSON File</div>
+          <div class="upload-hint">Drag & drop or click to browse</div>
+        </div>
+        <input type="file" id="one-file-input" style="display:none" accept=".json,.geojson" onchange="uploadOneData(this.files[0])" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Channels & Localization Page ─────────────────────────────────────── -->
+  <div class="page" id="page-channels">
+    <div class="page-header">
+      <div>
+        <div class="page-title">💬 Channels &amp; Localization</div>
+        <div class="page-subtitle">Configure WhatsApp Cloud API and Audio/TTS providers</div>
+      </div>
+      <span class="api-badge">POST /api/admin/channels/*</span>
+    </div>
+
+    <div class="grid-2">
+      <!-- WhatsApp Config Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="card-icon">📱</span> WhatsApp Cloud API</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number ID</label>
+          <input type="text" class="form-input" id="inp-wa-phone-id" placeholder="e.g. 10123456789" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Access Token</label>
+          <input type="password" class="form-input" id="inp-wa-token" placeholder="EAAB..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Webhook Verify Token</label>
+          <input type="password" class="form-input" id="inp-wa-verify" placeholder="my-secret-token" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Webhook URL (For Reference)</label>
+          <div class="input-group">
+            <input type="text" class="form-input" value="https://<your-domain>/api/whatsapp/webhook" readonly style="color:var(--text-muted); background: rgba(0,0,0,0.2);" />
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+          <button class="btn btn-primary" onclick="saveWhatsAppConfig()">
+            <span>💾</span> Save WhatsApp Config
+          </button>
+        </div>
+      </div>
+
+      <!-- ASR/TTS Config Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="card-icon">🎙️</span> ASR &amp; TTS Providers</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Provider <span class="required">*</span></label>
+          <div class="select-wrapper">
+            <select class="form-select" id="sel-audio-provider" onchange="onAudioProviderChange()">
+              <option value="bhashini">Bhashini (Indic)</option>
+              <option value="gemini">Gemini TTS</option>
+              <option value="whisper">Whisperflow</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="audio-config-bhashini">
+          <div class="form-group">
+            <label class="form-label">User ID</label>
+            <input type="text" class="form-input" id="inp-bh-userid" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">API Key</label>
+            <input type="password" class="form-input" id="inp-bh-apikey" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pipeline ID</label>
+            <input type="text" class="form-input" id="inp-bh-pipeline" />
+          </div>
+        </div>
+
+        <div id="audio-config-generic" style="display:none">
+          <div class="form-group">
+            <label class="form-label">API Key</label>
+            <input type="password" class="form-input" id="inp-generic-audio-key" placeholder="sk-..." />
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+          <button class="btn btn-primary" onclick="saveAudioConfig()">
+            <span>💾</span> Save Audio Config
+          </button>
+        </div>
+      </div>
+
+      <!-- Multilingual Toggle Card -->
+      <div class="card" style="grid-column: span 2;">
+        <div class="card-header">
+          <div class="card-title"><span class="card-icon">🌐</span> Multilingual Support (Indian Languages)</div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 20px;">
+          <div>
+            <div style="font-size: 14px; font-weight: 600;">Enable Local Language Support</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Activates real-time translation (Hindi, Gujarati, Marathi) using configured ASR/TTS.</div>
+          </div>
+          <label style="position:relative; display:inline-block; width:50px; height:26px;">
+            <input type="checkbox" id="toggle-multilingual" onchange="onMultilingualToggle()" style="opacity:0; width:0; height:0;">
+            <span class="slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:.4s; border-radius:34px;"></span>
+          </label>
+        </div>
+        
+        <style>
+          input:checked + .slider { background-color: var(--accent); }
+          input:focus + .slider { box-shadow: 0 0 1px var(--accent); }
+          input:checked + .slider:before { transform: translateX(24px); }
+          .slider:before { position:absolute; content:""; height:18px; width:18px; left:4px; bottom:4px; background-color:white; transition:.4s; border-radius:50%; }
+        </style>
+
+        <div id="multilingual-settings" style="display:none; padding-top: 16px; border-top: 1px solid var(--border);">
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Audio Provider <span class="required">*</span></label>
+              <div class="select-wrapper">
+                <select class="form-select" id="multi-audio-provider">
+                  <option value="bhashini">Bhashini (Indic)</option>
+                  <option value="gemini">Gemini TTS/STT</option>
+                  <option value="whisper">Whisper</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Supported Languages</label>
+              <div style="display:flex; gap: 12px; margin-top: 8px;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary)"><input type="checkbox" checked disabled> Hindi</label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary)"><input type="checkbox" checked disabled> Gujarati</label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary)"><input type="checkbox" checked disabled> Marathi</label>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+            <button class="btn btn-primary" onclick="saveMultilingualConfig()">
+              <span>💾</span> Save Config
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── System Health Page ────────────────────────────────────────────── -->
+  <div class="page" id="page-health">
+    <div class="page-header">
+      <div>
+        <div class="page-title">💚 System Health</div>
+        <div class="page-subtitle">Real-time status of all services</div>
+      </div>
+      <button class="btn btn-secondary" onclick="loadHealth()">🔄 Refresh</button>
+    </div>
+
+    <div class="health-grid" id="health-grid">
+      <div class="health-item">
+        <div class="health-indicator hi-ok">🗄️</div>
+        <div>
+          <div class="health-label">PostgreSQL Database</div>
+          <div class="health-value">Checking...</div>
+        </div>
+      </div>
+      <div class="health-item">
+        <div class="health-indicator hi-ok">⚡</div>
+        <div>
+          <div class="health-label">Redis Cache</div>
+          <div class="health-value">Checking...</div>
+        </div>
+      </div>
+      <div class="health-item">
+        <div class="health-indicator hi-ok">🤖</div>
+        <div>
+          <div class="health-label">LLM Provider</div>
+          <div class="health-value" id="health-llm">Checking...</div>
+        </div>
+      </div>
+      <div class="health-item">
+        <div class="health-indicator hi-ok">📚</div>
+        <div>
+          <div class="health-label">RAG Index (pgvector)</div>
+          <div class="health-value">Checking...</div>
+        </div>
+      </div>
+      <div class="health-item">
+        <div class="health-indicator hi-ok">⚙️</div>
+        <div>
+          <div class="health-label">Rules Engine (10 Gates)</div>
+          <div class="health-value">✅ Operational</div>
+        </div>
+      </div>
+      <div class="health-item">
+        <div class="health-indicator hi-ok">🛡️</div>
+        <div>
+          <div class="health-label">Eligibility Guardrails</div>
+          <div class="health-value">✅ Active</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ─── Login Modal ───────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal" style="width: 400px">
+    <div class="modal-title">Admin Login</div>
+    <div class="modal-sub">Please enter your credentials to access the admin panel.</div>
+
+    <div class="form-group">
+      <label class="form-label">Username</label>
+      <input type="text" class="form-input" id="inp-username" placeholder="admin" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input type="password" class="form-input" id="inp-password" placeholder="••••••••" />
+    </div>
+
+    <div class="modal-footer" style="justify-content: center">
+      <button class="btn btn-primary" style="width: 100%" onclick="doLogin()">Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Upload Modal ─────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="upload-modal">
+  <div class="modal">
+    <div class="modal-title">⬆️ Upload Document to Corpus</div>
+    <div class="modal-sub">Uploaded documents are automatically chunked and indexed into the RAG vector store.</div>
+
+    <div class="form-group">
+      <label class="form-label">Document File (PDF / TXT) <span class="required">*</span></label>
+      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div class="upload-icon">📎</div>
+        <div class="upload-text" id="drop-text">Click to select or drag & drop</div>
+        <div class="upload-hint">PDF, TXT, MD — max 50MB</div>
+      </div>
+      <input type="file" id="file-input" accept=".pdf,.txt,.md" style="display:none" onchange="onFileSelect(event)" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Document Title <span class="required">*</span></label>
+      <input type="text" class="form-input" id="doc-title" placeholder="e.g. VM0047 v1.1 Methodology" />
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Version</label>
+        <input type="text" class="form-input" id="doc-version" placeholder="e.g. 1.1" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Effective Date</label>
+        <input type="date" class="form-input" id="doc-eff-date" />
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Jurisdiction</label>
+        <div class="select-wrapper">
+          <select class="form-select" id="doc-jurisdiction">
+            <option value="global">Global</option>
+            <option value="India">India</option>
+            <option value="state:Maharashtra">State — Maharashtra</option>
+            <option value="state:Gujarat">State — Gujarat</option>
+            <option value="state:Karnataka">State — Karnataka</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Document Type</label>
+        <div class="select-wrapper">
+          <select class="form-select" id="doc-type">
+            <option value="methodology">Methodology</option>
+            <option value="regulation">Regulation</option>
+            <option value="guidance">Guidance</option>
+            <option value="notification">Notification</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="upload-progress" style="display:none">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:6px" id="progress-text">Uploading...</div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeUploadModal()">Cancel</button>
+      <button class="btn btn-primary" id="btn-upload" onclick="doUpload()">⬆️ Upload &amp; Index</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Toast ─────────────────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const API_BASE = window.location.origin;
+let ADMIN_TOKEN = localStorage.getItem('admin_token') || '';
+
+if (!ADMIN_TOKEN) {
+  document.getElementById('login-modal').classList.add('open');
+}
+
+const authHeader = () => ({
+  'Authorization': `Bearer ${ADMIN_TOKEN}`,
+});
+
+const headers = () => ({
+  'Content-Type': 'application/json',
+  ...authHeader(),
+});
+
+function handle401(res) {
+  if (res.status === 401) {
+    toast('Session expired. Please login again.', 'err');
+    logout();
+    throw new Error('Unauthorized');
+  }
+  return res;
+}
+
+function onMultilingualToggle() {
+  const isEnabled = document.getElementById('toggle-multilingual').checked;
+  const settingsDiv = document.getElementById('multilingual-settings');
+  settingsDiv.style.display = isEnabled ? 'block' : 'none';
+  
+  if (isEnabled) {
+    // Show 5s popup warning
+    const popup = document.createElement('div');
+    popup.style.cssText = `position:fixed; top:24px; left:50%; transform:translateX(-50%); background:var(--warn); color:#000; padding:16px 24px; border-radius:var(--radius-sm); z-index:10000; font-weight:600; font-size:14px; box-shadow:var(--shadow); animation:slideDown 0.3s ease;`;
+    popup.innerHTML = `⚠️ Ensure you switch the LLM and TTS/STT models to a robust multilingual model (like GPT-4o or Claude 3.5) for optimal performance.`;
+    document.body.appendChild(popup);
+    setTimeout(() => {
+      popup.style.animation = 'slideUp 0.3s ease forwards';
+      setTimeout(() => popup.remove(), 300);
+    }, 5000);
+  }
+}
+
+async function saveMultilingualConfig() {
+  const isEnabled = document.getElementById('toggle-multilingual').checked;
+  const audioProvider = document.getElementById('multi-audio-provider').value;
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/channels/multilingual`, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ enabled: isEnabled, audio_provider: audioProvider, supported_languages: ["hi", "gu", "mr"] })
+    });
+    const data = await res.json();
+    toast(`✅ ${data.message}`, 'ok');
+  } catch (e) { toast(`❌ Error: ${e.message}`, 'err'); }
+}
+
+async function doLogin() {
+  const user = document.getElementById('inp-username').value;
+  const pass = document.getElementById('inp-password').value;
+  const btn = document.querySelector('#login-modal .btn-primary');
+  btn.textContent = 'Logging in...';
+  
+  const formData = new URLSearchParams();
+  formData.append('username', user);
+  formData.append('password', pass);
+  
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/login`, {
+      method: 'POST',
+      body: formData
+    });
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem('admin_token', data.access_token);
+      ADMIN_TOKEN = data.access_token;
+      document.getElementById('login-modal').classList.remove('open');
+      btn.textContent = 'Login';
+      navigate('llm');
+    } else {
+      alert('Login failed. Please check credentials.');
+      btn.textContent = 'Login';
+    }
+  } catch(e) {
+    alert('Login error: ' + e.message);
+    btn.textContent = 'Login';
+  }
+}
+
+function logout() {
+  localStorage.removeItem('admin_token');
+  ADMIN_TOKEN = '';
+  document.getElementById('login-modal').classList.add('open');
+}
+
+// ── Provider → Models mapping ────────────────────────────────────────────────
+const PROVIDER_MODELS = {
+  claude:  ['claude-3-5-sonnet-20241022','claude-3-5-haiku-20241022','claude-3-opus-20240229','claude-3-haiku-20240307'],
+  openai:  ['gpt-4o','gpt-4o-mini','gpt-3.5-turbo'],
+  groq:    ['llama-3.3-70b-versatile','llama-3.1-8b-instant','openai/gpt-oss-120b','openai/gpt-oss-20b'],
+  gemini:  ['gemini-2.0-flash-exp','gemini-1.5-pro','gemini-1.5-flash','gemini-1.5-flash-8b'],
+};
+
+const PROVIDER_ICONS = { claude:'🧠', openai:'⚡', groq:'🚀', gemini:'💫' };
+const PROVIDER_LABELS = { claude:'Claude (Anthropic)', openai:'OpenAI GPT', groq:'Groq (Llama/Mixtral)', gemini:'Google Gemini' };
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+
+  const navMap = { 
+    dashboard: 0, 
+    leads: 1, 
+    llm: 2, 
+    docs: 3, 
+    geo: 4, 
+    channels: 5, 
+    health: 6 
+  };
+  if (navMap[page] !== undefined) {
+    document.querySelectorAll('.nav-item')[navMap[page]].classList.add('active');
+  }
+
+  if (page === 'docs') loadDocs();
+  if (page === 'health') loadHealth();
+  if (page === 'llm') refreshStatus();
+  if (page === 'geo') loadGeoStatus();
+}
+
+// ── Provider change ──────────────────────────────────────────────────────────
+function onProviderChange() {
+  const provider = document.getElementById('sel-provider').value;
+  const modelSel = document.getElementById('sel-model');
+  modelSel.innerHTML = '';
+  if (!provider) { modelSel.innerHTML = '<option>Select provider first...</option>'; return; }
+  (PROVIDER_MODELS[provider] || []).forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    modelSel.appendChild(opt);
+  });
+  document.getElementById('active-avatar').textContent = PROVIDER_ICONS[provider] || '🤖';
+}
+
+// ── Tab switch ───────────────────────────────────────────────────────────────
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('current-tab-is-fallback').value = (tab === 'fallback') ? 'true' : 'false';
+}
+
+// ── Toggle API key visibility ────────────────────────────────────────────────
+function toggleKey() {
+  const inp = document.getElementById('inp-apikey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// ── Test Only (no switch) ────────────────────────────────────────────────────
+async function testOnly() {
+  const { provider, model, apiKey } = getFormValues();
+  if (!validate(provider, model, apiKey)) return;
+  showHealth('loading', '🔄 Testing connection...');
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/llm/test`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...headers() },
+      body: JSON.stringify({ provider, model_name: model, api_key: apiKey }),
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      showHealth('ok', `✅ Connected — ${data.latency_ms}ms — ${data.model_used}`);
+    } else {
+      showHealth('error', `❌ ${data.error}`);
+    }
+  } catch(e) { showHealth('error', `❌ Request failed: ${e.message}`); }
+}
+
+// ── Save & Switch ────────────────────────────────────────────────────────────
+async function saveAndSwitch() {
+  const { provider, model, apiKey } = getFormValues();
+  if (!validate(provider, model, apiKey)) return;
+  const isFallback = document.getElementById('current-tab-is-fallback').value === 'true';
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Testing & Switching...';
+  showHealth('loading', '🔄 Running health check before switching...');
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/llm/switch`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...headers() },
+      body: JSON.stringify({ provider, model_name: model, api_key: apiKey, is_fallback: isFallback }),
+    });
+    const data = await res.json();
+    if (data.switched) {
+      showHealth('ok', `✅ Switched! ${data.health_check.latency_ms}ms · ${data.message}`);
+      toast(data.message, 'ok');
+      refreshStatus();
+    } else {
+      showHealth('error', `❌ ${data.message}`);
+      toast('Switch failed — previous config preserved', 'err');
+    }
+  } catch(e) {
+    showHealth('error', `❌ Request failed: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>⚡</span> Save &amp; Switch';
+  }
+}
+
+// ── Refresh status banner ────────────────────────────────────────────────────
+async function refreshStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/llm/status`, { headers: headers() });
+    const data = await res.json();
+    const primary = data.primary;
+    const fallback = data.fallback;
+    if (primary) {
+      document.getElementById('active-model-name').textContent =
+        `${PROVIDER_LABELS[primary.provider] || primary.provider} — ${primary.model_name}`;
+      document.getElementById('active-avatar').textContent = PROVIDER_ICONS[primary.provider] || '🤖';
+    } else {
+      document.getElementById('active-model-name').textContent = 'No model configured';
+    }
+    const statusDiv = document.getElementById('llm-status-display');
+    statusDiv.innerHTML = `
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Primary</div>
+        ${primary ? `
+          <div style="display:flex;align-items:center;gap:10px;padding:12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px">
+            <span style="font-size:22px">${PROVIDER_ICONS[primary.provider]||'🤖'}</span>
+            <div>
+              <div style="font-size:13px;font-weight:600">${primary.model_name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${PROVIDER_LABELS[primary.provider]||primary.provider}</div>
+            </div>
+            <span class="badge badge-success" style="margin-left:auto">● Active</span>
+          </div>` : `<div style="color:var(--text-muted);font-size:13px">Not configured</div>`}
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Fallback</div>
+        ${fallback ? `
+          <div style="display:flex;align-items:center;gap:10px;padding:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px">
+            <span style="font-size:22px">${PROVIDER_ICONS[fallback.provider]||'🛡️'}</span>
+            <div>
+              <div style="font-size:13px;font-weight:600">${fallback.model_name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${PROVIDER_LABELS[fallback.provider]||fallback.provider}</div>
+            </div>
+            <span class="badge badge-warn" style="margin-left:auto">Standby</span>
+          </div>` : `<div style="color:var(--text-muted);font-size:13px;padding:12px;border:1px dashed var(--border);border-radius:8px;text-align:center">
+            No fallback configured — click Fallback tab to add one
+          </div>`}
+      </div>`;
+  } catch(e) {
+    console.error('Status fetch failed:', e);
+  }
+}
+
+// ── Document Corpus ──────────────────────────────────────────────────────────
+async function loadDocs() {
+  const tbody = document.getElementById('docs-table-body');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px">Loading...</td></tr>';
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/documents`, { headers: headers() });
+    handle401(res);
+    const data = await res.json();
+    if (!data.documents || data.documents.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:40px">No documents in corpus yet. Upload your first document.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.documents.map(d => `
+      <tr>
+        <td><div style="font-weight:500">${d.title}</div><div style="font-size:11px;color:var(--text-muted)">${d.standard_body||''} · ${d.doc_type||''}</div></td>
+        <td><span class="badge badge-muted">${d.version||'—'}</span></td>
+        <td class="td-mono">${d.effective_date||'—'}</td>
+        <td><span class="badge badge-muted">${d.jurisdiction||'global'}</span></td>
+        <td><span style="color:var(--accent);font-weight:600">${d.chunk_count}</span></td>
+        <td class="td-mono" style="font-size:11px">${d.retrieval_date}</td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-secondary btn-sm" onclick="openReplaceModal('${d.id}','${d.title}')">🔄 Replace</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteDoc('${d.id}','${d.title}')">🗑️</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--error);padding:32px">Error loading documents: ${e.message}</td></tr>`;
+  }
+}
+
+let sourcesLoaded = false;
+async function toggleSources() {
+  const el = document.getElementById('recommended-sources');
+  const chevron = document.getElementById('sources-chevron');
+  const isVisible = el.style.display === 'block';
+  el.style.display = isVisible ? 'none' : 'block';
+  chevron.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+  
+  if (!isVisible && !sourcesLoaded) {
+    const tbody = document.getElementById('sources-table-body');
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/corpus/recommended-sources`, { headers: headers() });
+      const data = await res.json();
+      tbody.innerHTML = data.sources.map(s => `
+        <tr>
+          <td style="font-weight:500">${s.name}</td>
+          <td style="font-size:12px; color:var(--text-secondary)">${s.description}</td>
+          <td><a href="${s.url}" target="_blank" style="color:var(--accent); text-decoration:none; font-size:12px; display:flex; align-items:center; gap:4px;">⬇️ Download <span style="font-size:10px">↗</span></a></td>
+        </tr>
+      `).join('');
+      sourcesLoaded = true;
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--error);padding:16px">Error: ${e.message}</td></tr>`;
+    }
+  }
+}
+
+function openUploadModal() { document.getElementById('upload-modal').classList.add('open'); }
+function closeUploadModal() { document.getElementById('upload-modal').classList.remove('open'); resetUploadForm(); }
+
+function onFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) document.getElementById('drop-text').textContent = `Selected: ${file.name}`;
+}
+
+// Drag & drop
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) { document.getElementById('file-input').files = e.dataTransfer.files; document.getElementById('drop-text').textContent = `Selected: ${file.name}`; }
+});
+
+async function doUpload() {
+  const file = document.getElementById('file-input').files[0];
+  const title = document.getElementById('doc-title').value.trim();
+  if (!file || !title) { toast('Please select a file and enter a title', 'err'); return; }
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('title', title);
+  fd.append('version', document.getElementById('doc-version').value);
+  fd.append('effective_date', document.getElementById('doc-eff-date').value);
+  fd.append('jurisdiction', document.getElementById('doc-jurisdiction').value);
+  fd.append('doc_type', document.getElementById('doc-type').value);
+
+  document.getElementById('btn-upload').disabled = true;
+  document.getElementById('upload-progress').style.display = 'block';
+  document.getElementById('progress-fill').style.width = '30%';
+  document.getElementById('progress-text').textContent = 'Uploading & indexing...';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/documents/upload`, {
+      method: 'POST',
+      headers: authHeader(),
+      body: fd,
+    });
+    handle401(res);
+    document.getElementById('progress-fill').style.width = '100%';
+    const data = await res.json();
+    document.getElementById('progress-text').textContent = data.message;
+    toast(`✅ ${data.message}`, 'ok');
+    setTimeout(() => { closeUploadModal(); loadDocs(); }, 1200);
+  } catch(e) {
+    toast(`❌ Upload failed: ${e.message}`, 'err');
+    document.getElementById('progress-text').textContent = 'Upload failed.';
+  } finally {
+    document.getElementById('btn-upload').disabled = false;
+  }
+}
+
+function resetUploadForm() {
+  document.getElementById('file-input').value = '';
+  document.getElementById('drop-text').textContent = 'Click to select or drag & drop';
+  document.getElementById('doc-title').value = '';
+  document.getElementById('doc-version').value = '';
+  document.getElementById('doc-eff-date').value = '';
+  document.getElementById('upload-progress').style.display = 'none';
+  document.getElementById('progress-fill').style.width = '0%';
+}
+
+async function deleteDoc(id, title) {
+  if (!confirm(`Archive document "${title}"?\nIt will be removed from active retrieval (not permanently deleted).`)) return;
+  try {
+    await fetch(`${API_BASE}/api/admin/documents/${id}`, { method: 'DELETE', headers: headers() });
+    toast(`✅ "${title}" archived`, 'ok');
+    loadDocs();
+  } catch(e) { toast(`❌ ${e.message}`, 'err'); }
+}
+
+function openReplaceModal(id, title) {
+  // For simplicity, reuse the upload modal with replace mode
+  openUploadModal();
+  document.getElementById('doc-title').value = title;
+  document.getElementById('btn-upload').textContent = '🔄 Replace & Re-index';
+  document.getElementById('btn-upload').onclick = () => doReplace(id);
+}
+
+async function doReplace(docId) {
+  const file = document.getElementById('file-input').files[0];
+  if (!file) { toast('Please select a replacement file', 'err'); return; }
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('version', document.getElementById('doc-version').value);
+  fd.append('effective_date', document.getElementById('doc-eff-date').value);
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/documents/${docId}/replace`, {
+      method: 'PUT', headers: authHeader(), body: fd,
+    });
+    const data = await res.json();
+    toast(`✅ ${data.message}`, 'ok');
+    closeUploadModal();
+    loadDocs();
+  } catch(e) { toast(`❌ ${e.message}`, 'err'); }
+}
+
+// ── System Health ─────────────────────────────────────────────────────────────
+async function loadHealth() {
+  try {
+    const res = await fetch(`${API_BASE}/health`);
+    const data = await res.json();
+    const llm = data.llm;
+    document.getElementById('health-llm').textContent =
+      llm.primary_ready ? `✅ ${llm.primary?.model_name || 'Ready'}` : '⚠️ Not configured';
+  } catch(e) {
+    document.getElementById('health-llm').textContent = '❌ API unreachable';
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function getFormValues() {
+  return {
+    provider: document.getElementById('sel-provider').value,
+    model: document.getElementById('sel-model').value,
+    apiKey: document.getElementById('inp-apikey').value.trim(),
+  };
+}
+
+function validate(provider, model, apiKey) {
+  if (!provider) { toast('Please select a provider', 'err'); return false; }
+  if (!model) { toast('Please select a model', 'err'); return false; }
+  if (!apiKey) { toast('Please enter an API key', 'err'); return false; }
+  return true;
+}
+
+function showHealth(type, msg) {
+  const el = document.getElementById('health-result');
+  el.className = 'health-result ' + type;
+  el.style.display = 'flex';
+  el.innerHTML = type === 'loading'
+    ? `<div class="spinner"></div><span>${msg}</span>`
+    : `<span>${msg}</span>`;
+}
+
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.className = `toast-${type}`;
+  el.style.display = 'flex';
+  el.textContent = msg;
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function initAdmin() {
+  refreshStatus();
+  if (document.getElementById('page-docs').classList.contains('active')) {
+    loadDocs();
+  } else if (document.getElementById('page-dashboard').classList.contains('active')) {
+    loadDashboard();
+  } else if (document.getElementById('page-leads').classList.contains('active')) {
+    fetchLeads();
+  }
+}
+
+if (!ADMIN_TOKEN) {
+  document.getElementById('login-modal').classList.add('open');
+} else {
+  initAdmin();
+}
+
+    async function saveGeeKey() {
+      const keyStr = document.getElementById('inp-gee-key').value.trim();
+      if (!keyStr) return showToast('Please enter the service account JSON', 'err');
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/geospatial/gee-key`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers() },
+          body: JSON.stringify({ service_account_json: keyStr })
+        });
+        const data = await res.json();
+        if(res.ok) {
+          showToast('GEE Key saved successfully!', 'ok');
+          document.getElementById('inp-gee-key').value = '';
+        } else {
+          showToast('Error: ' + (data.detail || 'Failed to save'), 'err');
+        }
+      } catch (err) {
+        showToast('Network error', 'err');
+      }
+    }
+
+    async function uploadOneData(file) {
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      try {
+        showToast('Uploading...', 'ok');
+        const res = await fetch(`${API_BASE}/api/admin/geospatial/one-data`, {
+          method: 'POST',
+          headers: headers(),
+          body: formData
+        });
+        const data = await res.json();
+        if(res.ok) {
+          showToast('ONE Data uploaded successfully!', 'ok');
+        } else {
+          showToast('Error: ' + (data.detail || 'Failed to upload'), 'err');
+        }
+      } catch (err) {
+        showToast('Network error', 'err');
+      }
+      document.getElementById('one-file-input').value = '';
+    }
+
+    async function loadGeoStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/geospatial/status`, { headers: headers() });
+        const data = await res.json();
+        const banner = document.getElementById('geo-validation-banner');
+        const icon = document.getElementById('geo-banner-icon');
+        const title = document.getElementById('geo-banner-title');
+        const text = document.getElementById('geo-banner-text');
+
+        banner.style.display = 'flex';
+        if (data.features_active) {
+          banner.style.background = 'rgba(16,185,129,0.1)';
+          banner.style.borderColor = 'rgba(16,185,129,0.3)';
+          banner.style.color = 'var(--success)';
+          icon.textContent = '✅';
+          title.textContent = 'Geospatial Features Active';
+          text.textContent = 'GEE and ONE data are configured correctly. Full analysis is enabled.';
+        } else {
+          banner.style.background = 'rgba(239,68,68,0.1)';
+          banner.style.borderColor = 'rgba(239,68,68,0.3)';
+          banner.style.color = 'var(--error)';
+          icon.textContent = '⚠️';
+          title.textContent = 'Action Required: Geospatial Incomplete';
+          let missing = [];
+          if (!data.gee_valid) missing.push('valid GEE Service Account');
+          if (!data.one_data_loaded) missing.push('ONE GeoJSON dataset');
+          text.textContent = 'Missing: ' + missing.join(' and ') + '. Tree cover stats and ONE checks will be skipped until configured.';
+        }
+      } catch (e) {
+        console.error('Failed to load geo status', e);
+      }
+    }
+
+    // ── Channels & Localization ──────────────────────────────────────────────
+    function onAudioProviderChange() {
+      const provider = document.getElementById('sel-audio-provider').value;
+      if (provider === 'bhashini') {
+        document.getElementById('audio-config-bhashini').style.display = 'block';
+        document.getElementById('audio-config-generic').style.display = 'none';
+      } else {
+        document.getElementById('audio-config-bhashini').style.display = 'none';
+        document.getElementById('audio-config-generic').style.display = 'block';
+      }
+    }
+
+    async function saveWhatsAppConfig() {
+      const phoneId = document.getElementById('inp-wa-phone-id').value.trim();
+      const token = document.getElementById('inp-wa-token').value.trim();
+      const verifyToken = document.getElementById('inp-wa-verify').value.trim();
+
+      if (!phoneId || !token || !verifyToken) {
+        return toast('Please fill in all WhatsApp fields', 'err');
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/channels/whatsapp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers() },
+          body: JSON.stringify({ phone_number_id: phoneId, access_token: token, verify_token: verifyToken })
+        });
+        if (res.ok) toast('✅ WhatsApp Config saved!', 'ok');
+        else toast('❌ Failed to save config', 'err');
+      } catch (e) {
+        toast('❌ Network error', 'err');
+      }
+    }
+
+    async function saveAudioConfig() {
+      const provider = document.getElementById('sel-audio-provider').value;
+      let payload = { provider };
+
+      if (provider === 'bhashini') {
+        payload.user_id = document.getElementById('inp-bh-userid').value.trim();
+        payload.api_key = document.getElementById('inp-bh-apikey').value.trim();
+        payload.pipeline_id = document.getElementById('inp-bh-pipeline').value.trim();
+        if (!payload.user_id || !payload.api_key || !payload.pipeline_id) {
+          return toast('Please fill all Bhashini fields', 'err');
+        }
+      } else {
+        payload.api_key = document.getElementById('inp-generic-audio-key').value.trim();
+        if (!payload.api_key) return toast('Please enter the API key', 'err');
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/channels/audio`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers() },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) toast('✅ Audio Config saved!', 'ok');
+        else toast('❌ Failed to save config', 'err');
+      } catch (e) {
+        toast('❌ Network error', 'err');
+      }
+    }
+
+    // ── Dashboard & Leads ────────────────────────────────────────────────────
+    async function loadDashboard() {
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/dashboard/kpis`, { headers: headers() });
+        const data = await res.json();
+        document.getElementById('kpi-users').textContent = data.total_users;
+        document.getElementById('kpi-started').textContent = data.assessments_started;
+        document.getElementById('kpi-completed').textContent = data.assessments_completed;
+        document.getElementById('kpi-promising').textContent = data.eligible_promising;
+        document.getElementById('kpi-aggregation').textContent = data.aggregation_candidates;
+        document.getElementById('kpi-leads').textContent = data.leads_generated;
+        document.getElementById('kpi-conversion').textContent = data.lead_conversion + '%';
+        document.getElementById('kpi-time').textContent = data.average_assessment_completion;
+      } catch (e) {
+        console.error('Failed to load KPIs:', e);
+      }
+    }
+
+    async function fetchLeads() {
+      const tbody = document.querySelector('#leads-table tbody');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted)">Loading leads...</td></tr>';
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/leads`, { headers: headers() });
+        const data = await res.json();
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted)">No leads found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(L => `
+          <tr style="cursor: pointer" onclick="openLeadModal('${L.id}')">
+            <td>
+              <div style="font-weight: 500">${L.name}</div>
+              <div style="font-size: 11px; color: var(--text-muted)">ID: ${L.id.substring(0,8)}</div>
+            </td>
+            <td>${L.location}</td>
+            <td class="td-mono">${L.area} ha</td>
+            <td>
+              <span class="badge ${L.verdict.toLowerCase().includes('promising') ? 'badge-success' : L.verdict.toLowerCase().includes('aggregation') ? 'badge-warn' : 'badge-muted'}">
+                ${L.verdict.substring(0,25)}
+              </span>
+            </td>
+            <td><span class="badge badge-muted">${L.intent}</span></td>
+            <td>
+              <span class="badge ${L.status === 'new' ? 'badge-success' : L.status === 'disqualified' ? 'badge-error' : 'badge-warn'}">
+                ${L.status}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openLeadModal('${L.id}')">View</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--error)">Failed to load leads</td></tr>';
+      }
+    }
+
+    let currentLeadId = null;
+
+    async function openLeadModal(id) {
+      currentLeadId = id;
+      document.getElementById('lead-modal').style.display = 'block';
+      document.getElementById('modal-lead-name').textContent = 'Loading...';
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/leads/${id}`, { headers: headers() });
+        const data = await res.json();
+        
+        document.getElementById('modal-lead-name').textContent = data.personal_info?.name || 'Anonymous Lead';
+        document.getElementById('modal-status').value = data.status || 'new';
+        
+        const pi = data.personal_info || {};
+        document.getElementById('modal-personal-info').innerHTML = `
+          <div><strong>Mobile:</strong> ${pi.mobile || '-'}</div>
+          <div><strong>Email:</strong> ${pi.email || '-'}</div>
+          <div><strong>State:</strong> ${data.land_info?.state || '-'}</div>
+          <div><strong>Lead Score:</strong> <span class="badge ${data.lead_score === 'Hot' ? 'badge-success' : 'badge-muted'}">${data.lead_score || 'None'}</span></div>
+        `;
+        
+        const li = data.land_info || {};
+        document.getElementById('modal-land-info').innerHTML = `
+          <div><strong>Area:</strong> ${li.area_ha || 0} ha</div>
+          <div><strong>Tenure:</strong> ${li.tenure_type || '-'}</div>
+          <div><strong>Legal Class:</strong> ${li.land_legal_class || '-'}</div>
+          <hr style="border: 0; border-top: 1px solid var(--border); margin: 8px 0" />
+          <div><strong>Verdict:</strong> ${data.verdict || '-'}</div>
+          <div><strong>Confidence:</strong> ${data.confidence || '-'}</div>
+        `;
+        
+        const conv = data.conversation || [];
+        document.getElementById('modal-conversation').innerHTML = conv.map(m => `
+          <div style="margin-bottom: 8px;">
+            <strong style="color: ${m.role === 'user' ? 'var(--accent)' : 'var(--text-secondary)'}">${m.role === 'user' ? 'User' : 'Assistant'}:</strong>
+            <span style="white-space: pre-wrap">${m.content}</span>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('Failed to load lead details', e);
+      }
+    }
+
+    async function updateLeadStatus() {
+      if (!currentLeadId) return;
+      const status = document.getElementById('modal-status').value;
+      
+      try {
+        await fetch(`${API_BASE}/api/admin/leads/${currentLeadId}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers() },
+          body: JSON.stringify({ status })
+        });
+        toast('Lead status updated', 'ok');
+        fetchLeads();
+      } catch (e) {
+        toast('Failed to update status', 'err');
+      }
+    }
+  </script>
+</body>
+</html>

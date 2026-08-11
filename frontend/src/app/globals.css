@@ -1,0 +1,195 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+/* ─── Design System Tokens ─────────────────────────────────────────────────── */
+:root {
+  /* Palette */
+  --color-bg-deep:        #050e0a;
+  --color-bg-base:        #081410;
+  --color-bg-panel:       #0d1f18;
+  --color-bg-card:        #122519;
+  --color-bg-card-hover:  #19302a;
+  --color-bg-input:       #0a1a13;
+  --color-bg-overlay:     rgba(5,14,10,0.85);
+
+  --color-border:         rgba(52,211,153,0.12);
+  --color-border-strong:  rgba(52,211,153,0.25);
+  --color-border-focus:   rgba(52,211,153,0.55);
+
+  --color-emerald:        #34d399;
+  --color-emerald-dim:    #1a7a56;
+  --color-emerald-glow:   rgba(52,211,153,0.15);
+  --color-emerald-deep:   rgba(52,211,153,0.06);
+
+  --color-amber:          #f59e0b;
+  --color-amber-dim:      rgba(245,158,11,0.12);
+
+  --color-red:            #f87171;
+  --color-red-dim:        rgba(248,113,113,0.12);
+
+  --color-blue:           #60a5fa;
+  --color-blue-dim:       rgba(96,165,250,0.12);
+
+  --color-sky:            #38bdf8;
+  --color-violet:         #a78bfa;
+  --color-violet-dim:     rgba(167,139,250,0.12);
+
+  --color-text-primary:   #e8f5f0;
+  --color-text-secondary: #8fbba0;
+  --color-text-muted:     #4d7a5e;
+  --color-text-disabled:  #2a4033;
+
+  /* Typography */
+  --font-sans:  'Inter', 'DM Sans', system-ui, sans-serif;
+  --font-mono:  'DM Mono', 'Fira Code', monospace;
+
+  /* Shadows */
+  --shadow-card:    0 2px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(52,211,153,0.06);
+  --shadow-panel:   0 8px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(52,211,153,0.08);
+  --shadow-emerald: 0 0 32px rgba(52,211,153,0.15);
+  --shadow-input:   0 0 0 1px var(--color-border-focus), 0 0 16px rgba(52,211,153,0.08);
+
+  /* Radii */
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   20px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ─── Resets & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-deep);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--color-bg-base); }
+::-webkit-scrollbar-thumb { background: var(--color-emerald-dim); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-emerald); }
+
+/* ─── Animations ────────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-emerald {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(52,211,153,0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes typingDot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30%           { transform: translateY(-4px); opacity: 1; }
+}
+
+@keyframes drawLine {
+  from { stroke-dashoffset: 1000; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes progressFill {
+  from { width: 0; }
+  to   { width: var(--target-width); }
+}
+
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Verdict Badge Colors ──────────────────────────────────────────────────── */
+.verdict-promising {
+  --v-color: #34d399;
+  --v-bg: rgba(52,211,153,0.10);
+  --v-border: rgba(52,211,153,0.30);
+}
+.verdict-possible {
+  --v-color: #60a5fa;
+  --v-bg: rgba(96,165,250,0.10);
+  --v-border: rgba(96,165,250,0.30);
+}
+.verdict-aggregation {
+  --v-color: #a78bfa;
+  --v-bg: rgba(167,139,250,0.10);
+  --v-border: rgba(167,139,250,0.30);
+}
+.verdict-caution {
+  --v-color: #f59e0b;
+  --v-bg: rgba(245,158,11,0.10);
+  --v-border: rgba(245,158,11,0.30);
+}
+.verdict-ineligible {
+  --v-color: #f87171;
+  --v-bg: rgba(248,113,113,0.10);
+  --v-border: rgba(248,113,113,0.30);
+}
+.verdict-insufficient {
+  --v-color: #94a3b8;
+  --v-bg: rgba(148,163,184,0.10);
+  --v-border: rgba(148,163,184,0.30);
+}
+
+/* ─── Mapbox / MapLibre overrides ───────────────────────────────────────────── */
+.mapboxgl-ctrl-group {
+  background-color: var(--color-bg-card) !important;
+  border: 1px solid var(--color-border) !important;
+}
+.mapboxgl-ctrl-group button {
+  background-color: var(--color-bg-card) !important;
+}
+.mapboxgl-ctrl-icon {
+  filter: invert(0.7) sepia(1) hue-rotate(100deg);
+}
+.mapboxgl-popup-content {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  box-shadow: var(--shadow-card);
+}
+.mapboxgl-popup-tip {
+  border-top-color: var(--color-bg-card) !important;
+}

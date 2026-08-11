@@ -1,0 +1,201 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Carbon Market Eligibility Chatbot — Methodology Configuration
+#
+# DESIGN RULE (from the brief §1.5):
+#   "Hard-code the methodology names and versions in a config file, not in the
+#    prompt. They change."
+#
+# This file is the single source of truth for:
+#   - Methodology names, versions, effective dates, CCP approval status
+#   - Buffer rate defaults
+#   - Minimum viable scale thresholds
+#   - Price band ranges (for indicative estimates only)
+#   - Sequestration yield tables (screening only — not for verification)
+#
+# All values are loaded at startup and re-read on SIGHUP / admin reload.
+# The "last_verified" date must be updated whenever a field is re-checked
+# against its primary source.
+# ─────────────────────────────────────────────────────────────────────────────
+
+methodologies:
+  verra_arr_vm0047:
+    name: "VM0047 Methodology for Afforestation, Reforestation and Revegetation"
+    version: "1.1"
+    effective_date: "2025-06-01"
+    grace_period_deadline: "2026-12-31"
+    ccp_approved: true
+    ccp_approval_date: "2026-01-15"
+    quantification_approaches:
+      - area_based
+      - census_based
+    applicable_to:
+      - block_plantation
+      - agroforestry
+      - assisted_natural_regeneration
+      - bamboo_plantation
+    source_url: "https://verra.org/methodologies/vm0047-v1-1/"
+    last_verified: "2026-08-08"
+    notes: >
+      v1.1 allows project activities on already-forested land not managed
+      for wood products. Census-based approach enables scattered agroforestry.
+
+  ccts_mangrove_ar:
+    name: "CCTS Mangrove Afforestation and Reforestation Methodology"
+    version: "1.0"
+    effective_date: "2026-01-01"
+    project_start_min: "2025-01-01"
+    registry: "Grid-India"
+    applicable_to:
+      - mangrove_restoration
+    source_url: "https://beeindia.gov.in/ccts"
+    last_verified: "2026-08-08"
+    notes: >
+      Only applicable in CRZ-notified coastal zones. Requires CRZ clearance
+      and hydrology restoration plan.
+
+  ccts_agroforestry:
+    name: "CCTS Agroforestry Offset Methodology"
+    version: "1.0"
+    effective_date: "2026-01-01"
+    project_start_min: "2025-01-01"
+    registry: "Grid-India"
+    applicable_to:
+      - agroforestry
+    source_url: "https://beeindia.gov.in/ccts"
+    last_verified: "2026-08-08"
+
+  gold_standard_ar:
+    name: "Gold Standard Afforestation/Reforestation Requirements"
+    version: "current"
+    applicable_to:
+      - block_plantation
+      - agroforestry
+    source_url: "https://www.goldstandard.org/our-work/innovations-consultations/ar"
+    last_verified: "2026-08-08"
+
+  plan_vivo:
+    name: "Plan Vivo Standard"
+    version: "2023"
+    applicable_to:
+      - agroforestry
+      - assisted_natural_regeneration
+    source_url: "https://www.planvivo.org/plan-vivo-standard"
+    last_verified: "2026-08-08"
+
+
+# ─── Land Eligibility Thresholds ─────────────────────────────────────────────
+land_eligibility:
+  # India's CDM/Kyoto forest definition (submitted by India's DNA)
+  cdm_forest_threshold_canopy_pct: 15    # Gate 1 — above this = forest-status flag
+  cdm_forest_threshold_area_ha: 0.05
+  cdm_forest_threshold_height_m: 2
+
+  # No-recent-conversion window (Gate 2)
+  no_conversion_lookback_years: 10
+
+  # CCTS Offset Mechanism minimum project start date (Gate 3)
+  ccts_project_start_min: "2025-01-01"
+
+  # Registration window — planting older than this is likely ineligible for new registration
+  max_planting_age_years_for_registration: 5
+
+
+# ─── Scale & Economics Thresholds ────────────────────────────────────────────
+scale_economics:
+  # Gate 10 — area thresholds
+  standalone_feasible_min_ha: 500      # Below this: aggregation strongly recommended
+  aggregation_preferred_max_ha: 200    # Below this: aggregation almost mandatory
+  aggregation_required_max_ha: 2       # Below this: carbon credit path likely uneconomic
+
+  # Cost stack ranges (USD) — config-driven, never hardcoded in prompts
+  pdd_cost_usd:
+    verra: { low: 15000, high: 40000 }
+    gold_standard: { low: 20000, high: 50000 }
+    ccts: { low: 5000, high: 15000 }
+    plan_vivo: { low: 8000, high: 20000 }
+
+  validation_cost_usd:
+    per_project: { low: 8000, high: 25000 }
+
+  verification_cost_usd:
+    per_cycle: { low: 5000, high: 15000 }
+
+  # Aggregator / developer revenue share (% taken by developer)
+  aggregator_revenue_share_pct:
+    typical_low: 30
+    typical_high: 60
+    warning_threshold: 60   # Flag if developer takes > 60%
+
+  # Buffer pool withholding (% of issuance withheld to buffer pool)
+  buffer_rate:
+    default: 0.15
+    range_low: 0.10
+    range_high: 0.25
+
+
+# ─── Price Bands (USD/tCO2e) — for indicative estimates only ─────────────────
+price_bands:
+  nature_based_arr:
+    low: 15
+    high: 30
+    note: "Premium projects with high co-benefits may exceed this range"
+    last_verified: "2026-08-08"
+    source: "Independent market intelligence — re-verify before surfacing to users"
+
+  mangrove_restoration:
+    low: 10
+    high: 25
+    last_verified: "2026-08-08"
+
+  agroforestry:
+    low: 8
+    high: 20
+    last_verified: "2026-08-08"
+
+
+# ─── Sequestration Yield Table (tCO2e/ha/yr, averaged over 20 yrs) ──────────
+# SCREENING ONLY — not for use in project documentation or verification.
+# Real estimates require methodology-compliant allometric equations.
+sequestration_yields:
+  fast_growing_block_plantation:           # eucalyptus, melia, poplar, casuarina
+    low: 8
+    high: 20
+    first_verification_years: { min: 3, max: 5 }
+    main_variance: "Water availability, rotation length, harvest accounting"
+
+  mixed_native_restoration:
+    low: 3
+    high: 8
+    first_verification_years: { min: 5, max: 7 }
+    main_variance: "Survival rate, grazing pressure, rainfall"
+
+  agroforestry_boundary_scattered:
+    low: 1
+    high: 4
+    note: "Per ha of farm — lower density"
+    first_verification_years: { min: 4, max: 6 }
+    main_variance: "Tree density per hectare, species, pruning regime"
+
+  silvopasture_farm_forestry:
+    low: 3
+    high: 7
+    first_verification_years: { min: 4, max: 6 }
+    main_variance: "Stocking density, grazing management"
+
+  bamboo_plantation:
+    low: 6
+    high: 15
+    first_verification_years: { min: 3, max: 4 }
+    main_variance: "Clump management, harvest cycle, product fate"
+
+  mangrove_restoration:
+    low: 4
+    high: 12
+    first_verification_years: { min: 4, max: 6 }
+    main_variance: "Hydrology restoration quality, sediment carbon treatment"
+
+  assisted_natural_regeneration:
+    low: 2
+    high: 6
+    first_verification_years: { min: 5, max: 8 }
+    main_variance: "Rootstock presence, protection from fire and grazing"
