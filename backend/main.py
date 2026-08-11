@@ -28,6 +28,7 @@ from api.admin_dashboard import router as admin_dashboard_router
 from api.whatsapp import router as whatsapp_router
 from api.auth import router as auth_router, get_current_admin_user
 from api.user import router as user_router
+from api.client_auth import router as client_auth_router
 from fastapi import Depends
 
 logging.basicConfig(
@@ -85,6 +86,7 @@ app.add_middleware(
 app.include_router(assess_router,      prefix="/api/v1",    tags=["Eligibility"])
 app.include_router(chat_router,        prefix="/api/v1",    tags=["Chat Orchestrator"])
 app.include_router(user_router,        prefix="/api/v1",    tags=["User Registration"])
+app.include_router(client_auth_router, prefix="/api/v1/auth", tags=["Client Authentication"])
 app.include_router(whatsapp_router,    prefix="/api/whatsapp", tags=["WhatsApp Webhook"])
 app.include_router(auth_router,        prefix="/api/admin", tags=["Admin – Auth"])
 

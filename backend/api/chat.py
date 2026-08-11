@@ -11,14 +11,18 @@ json.dumps() cannot serialize. These are now converted to dicts before saving.
 import logging
 import uuid
 import json
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from orchestrator.graph import orchestrator_app
 from session.manager import session_manager
 from utils.crm_sync import sync_state_to_crm
 from memo.template_engine import MemoTemplateEngine
+from api.client_auth import get_current_client_user
+from models.orm_models import ClientUser, AssessmentSession
+from models.database import get_db
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -64,7 +68,7 @@ def _sanitize_state_for_session(state: dict) -> dict:
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest, req: Request):
+async def chat_endpoint(request: ChatRequest, req: Request, current_user: ClientUser = Depends(get_current_client_user)):
     """
     Main chat entry point. Invokes the LangGraph orchestrator and
     returns the assistant reply + structured UI state.
@@ -107,8 +111,8 @@ async def chat_endpoint(request: ChatRequest, req: Request):
                 "screening_started": False,
             }
 
-    if request.user_id:
-        initial_state["user_id"] = request.user_id
+    if current_user:
+        initial_state["user_id"] = str(current_user.id)
 
     # Clear transient UI actions from previous turns to prevent recurring popups
     if "ui_state" in initial_state and isinstance(initial_state["ui_state"], dict):
@@ -141,7 +145,7 @@ async def chat_endpoint(request: ChatRequest, req: Request):
         await session_manager.save_session(session_id, safe_state)
         # Background sync to postgres CRM
         import asyncio
-        asyncio.create_task(asyncio.to_thread(sync_state_to_crm, session_id, safe_state))
+        asyncio.create_task(asyncio.to_thread(sync_state_to_crm, session_id, safe_state, current_user.id, current_user.full_name))
     except Exception as e:
         logger.warning(f"Session save failed for {session_id}: {e}")
         # Non-fatal — response is still returned
@@ -172,3 +176,31 @@ async def chat_endpoint(request: ChatRequest, req: Request):
             logger.warning(f"Memo build failed: {e}")
 
     return response
+
+class SessionHistoryResponse(BaseModel):
+    session_id: str
+    created_at: str
+    preview: str
+
+@router.get("/user/sessions", response_model=List[SessionHistoryResponse])
+async def get_user_sessions(current_user: ClientUser = Depends(get_current_client_user), db: Session = Depends(get_db)):
+    """Fetch all chat sessions for the logged in user."""
+    # Since chats are primarily in Redis or synced to CRM (AssessmentSession),
+    # we can fetch from postgres AssessmentSession where user_id matches
+    sessions = db.query(AssessmentSession).filter(AssessmentSession.user_id == current_user.id).order_by(AssessmentSession.created_at.desc()).all()
+    
+    result = []
+    for s in sessions:
+        # Create a basic preview from intake data or fallback
+        preview = "New Assessment"
+        if s.intake_data and isinstance(s.intake_data, dict):
+             if "area_ha" in s.intake_data:
+                 preview = f"Assessment - {s.intake_data['area_ha']} ha"
+        
+        result.append(SessionHistoryResponse(
+            session_id=s.session_token,
+            created_at=s.created_at.isoformat() if s.created_at else "",
+            preview=preview
+        ))
+    return result
+

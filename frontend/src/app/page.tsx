@@ -2,6 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 
+import { Sidebar } from '../components/Sidebar';
+import { AuthModal } from '../components/AuthModal';
+import { useAuthStore } from '../store/authStore';
+
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Message {
   role: "user" | "assistant";
@@ -650,69 +655,6 @@ function SplashScreen({ onDismiss }: { onDismiss: () => void }) {
   );
 }
 
-function UserLoginModal({ onLogin }: { onLogin: (userId: string) => void }) {
-  const [name, setName] = useState("");
-  const [contactType, setContactType] = useState<"mobile" | "email">("mobile");
-  const [contact, setContact] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !contact.trim()) return;
-    
-    setLoading(true);
-    try {
-      const payload = {
-        name,
-        ...(contactType === "mobile" ? { mobile: contact } : { email: contact })
-      };
-      const res = await fetch(`${API_URL}/api/v1/user/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (data.user_id) {
-        onLogin(data.user_id);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
-      <div style={{ background: "var(--color-bg-panel)", borderRadius: "var(--radius-xl)", width: "100%", maxWidth: "400px", padding: "32px", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-panel)" }}>
-        <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          <h2 style={{ fontSize: "20px", fontWeight: 700, color: "var(--color-text-primary)", marginBottom: "8px" }}>Welcome to EnviroWealth</h2>
-          <p style={{ fontSize: "13px", color: "var(--color-text-secondary)" }}>Please provide your details to begin the eligibility screening.</p>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{ display: "block", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>Name <span style={{ color: "var(--color-amber)" }}>*</span></label>
-            <input type="text" required value={name} onChange={e => setName(e.target.value)} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }} />
-          </div>
-          
-          <div style={{ display: "flex", gap: "10px", marginBottom: "8px" }}>
-            <button type="button" onClick={() => setContactType("mobile")} style={{ flex: 1, padding: "8px", fontSize: "12px", background: contactType === "mobile" ? "var(--color-emerald-dim)" : "transparent", border: `1px solid ${contactType === "mobile" ? "var(--color-emerald)" : "var(--color-border)"}`, borderRadius: "var(--radius-sm)", color: contactType === "mobile" ? "#fff" : "var(--color-text-secondary)", cursor: "pointer" }}>Mobile</button>
-            <button type="button" onClick={() => setContactType("email")} style={{ flex: 1, padding: "8px", fontSize: "12px", background: contactType === "email" ? "var(--color-emerald-dim)" : "transparent", border: `1px solid ${contactType === "email" ? "var(--color-emerald)" : "var(--color-border)"}`, borderRadius: "var(--radius-sm)", color: contactType === "email" ? "#fff" : "var(--color-text-secondary)", cursor: "pointer" }}>Email</button>
-          </div>
-          
-          <div style={{ marginBottom: "24px" }}>
-            <input type={contactType === "email" ? "email" : "tel"} required placeholder={contactType === "email" ? "e.g. name@domain.com" : "e.g. 9876543210"} value={contact} onChange={e => setContact(e.target.value)} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }} />
-          </div>
-          
-          <button type="submit" disabled={loading} style={{ width: "100%", padding: "12px", background: "var(--color-emerald)", color: "#000", border: "none", borderRadius: "var(--radius-sm)", fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1 }}>
-            {loading ? "Starting..." : "Start Screening →"}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([
@@ -731,21 +673,14 @@ export default function Home() {
   const [showEligibilityModal, setShowEligibilityModal] = useState(false);
   const [newMessageIndex, setNewMessageIndex] = useState<number>(-1);
   const [showSplash, setShowSplash] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  
+  const { token, user, logout } = useAuthStore();
 
   useEffect(() => {
     // Check splash
     if (!sessionStorage.getItem("splashShown")) {
       setShowSplash(true);
       sessionStorage.setItem("splashShown", "true");
-    }
-    // Check login
-    const savedUser = localStorage.getItem("envirowealth_user_id");
-    if (savedUser) {
-      setUserId(savedUser);
-    } else {
-      setShowLogin(true);
     }
   }, []);
 
@@ -771,8 +706,8 @@ export default function Home() {
     try {
       const response = await fetch(`${API_URL}/api/v1/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId, user_id: userId, message: content.trim() }),
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ session_id: sessionId, message: content.trim() }),
       });
 
       if (!response.ok) {
@@ -835,22 +770,13 @@ export default function Home() {
   const progress = uiState.progress ?? 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "var(--color-bg-deep)", fontFamily: "var(--font-sans)" }}>
-
+    <div style={{ display: "flex", height: "100vh", background: "var(--color-bg-deep)", fontFamily: "var(--font-sans)" }}>
+      {token && <Sidebar onSelectSession={(id: string) => setSessionId(id)} currentSessionId={sessionId} onNewAssessment={() => {setSessionId(null); setMessages([{role: "assistant", content: "Let's start a new assessment.", timestamp: new Date()}]); setUiState({}); setMemo(null);}} />}
+      
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header style={{ flexShrink: 0, borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-panel)", padding: "0 24px" }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: "56px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ width: "32px", height: "32px", borderRadius: "10px", background: "var(--color-emerald-glow)", border: "1px solid var(--color-emerald-dim)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-emerald)" }}>
-              <LeafIcon />
-            </div>
-            <div>
-              <span style={{ fontWeight: 700, fontSize: "15px", color: "var(--color-text-primary)", letterSpacing: "-0.02em" }}>EnviroWealth</span>
-              <span style={{ marginLeft: "8px", fontSize: "11px", color: "var(--color-text-muted)", letterSpacing: "0.04em" }}>CARBON ELIGIBILITY ASSESSOR</span>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", height: "56px", gap: "16px" }}>
             {isScreening && (
               <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "5px 12px", background: "var(--color-emerald-deep)", border: "1px solid var(--color-border-strong)", borderRadius: "var(--radius-full)", animation: "fadeIn 0.3s ease" }}>
                 <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--color-emerald)", animation: "pulse-emerald 1.5s infinite" }} />
@@ -868,12 +794,14 @@ export default function Home() {
               <span>Map</span>
             </button>
             <span style={{ fontSize: "10px", color: "var(--color-text-disabled)", padding: "4px 8px", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)" }}>Screening only — not legal/financial advice</span>
-          </div>
+            {user && (
+               <button onClick={logout} style={{ padding: '6px 12px', background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '12px' }}>Logout ({user.full_name})</button>
+            )}
         </div>
       </header>
 
       {/* ── Body ───────────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden", maxWidth: "1280px", margin: "0 auto", width: "100%" }}>
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", width: "100%" }}>
 
         {/* Chat panel */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
@@ -1012,13 +940,8 @@ export default function Home() {
       )}
       
       {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
-      {!showSplash && showLogin && (
-        <UserLoginModal onLogin={(id) => {
-          setUserId(id);
-          localStorage.setItem("envirowealth_user_id", id);
-          setShowLogin(false);
-        }} />
-      )}
+      {!showSplash && !token && <AuthModal />}
+      </div>
     </div>
   );
 }

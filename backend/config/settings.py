@@ -29,17 +29,28 @@ class Settings(BaseSettings):
     @classmethod
     def parse_cors(cls, v):
         if isinstance(v, str):
+            if v.strip() == "*":
+                return ["*"]
             return json.loads(v)
         return v
 
     # ── Database ─────────────────────────────────────────────────────────────
     database_url: str = "postgresql+psycopg2://carbon:carbonpass@localhost:5432/carbondb"
+    
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def parse_db_url(cls, v):
+        if isinstance(v, str) and v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+psycopg2://", 1)
+        return v
+
     # Async URL for async SQLAlchemy usage
     @property
     def async_database_url(self) -> str:
-        return self.database_url.replace(
-            "postgresql+psycopg2://", "postgresql+asyncpg://"
-        )
+        url = self.database_url
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
 
     # ── Redis ─────────────────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
@@ -53,7 +64,7 @@ class Settings(BaseSettings):
 
     # ── LLM Defaults (overridden by DB config at runtime) ────────────────────
     default_llm_provider: str = "claude"
-    default_llm_model: str = "claude-3-5-sonnet-20241022"
+    default_llm_model: str = "claude-sonnet-5"
 
     # Bootstrap API keys (used only if DB has no config yet)
     anthropic_api_key: str = ""

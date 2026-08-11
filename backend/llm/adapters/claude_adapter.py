@@ -5,15 +5,15 @@ import anthropic
 from .base_adapter import BaseLLMAdapter, LLMResponse
 
 SUPPORTED_MODELS = [
-    "claude-3-5-sonnet-20241022",
-    "claude-3-5-haiku-20241022",
-    "claude-3-opus-20240229",
-    "claude-3-haiku-20240307",
+    "claude-fable-5",
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-haiku-4-5",
 ]
 
 
 class ClaudeAdapter(BaseLLMAdapter):
-    def __init__(self, api_key: str, model_name: str = "claude-3-5-sonnet-20241022", extra_params: Dict = None):
+    def __init__(self, api_key: str, model_name: str = "claude-sonnet-5", extra_params: Dict = None):
         super().__init__(api_key, model_name, extra_params)
         self.client = anthropic.AsyncAnthropic(api_key=api_key)
 

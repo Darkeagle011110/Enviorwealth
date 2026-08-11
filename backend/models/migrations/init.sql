@@ -76,10 +76,25 @@ CREATE INDEX IF NOT EXISTS idx_chunks_fts ON knowledge_chunks
     USING GIN (to_tsvector('english', content));
 
 -- =============================================================================
+-- USERS
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS client_users (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email           VARCHAR(255) UNIQUE NOT NULL,
+    password_hash   TEXT NOT NULL,
+    full_name       VARCHAR(255) NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_client_users_email ON client_users(email);
+
+
+-- =============================================================================
 -- ASSESSMENTS (intake + gate results + verdicts)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS assessment_sessions (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID REFERENCES client_users(id) ON DELETE CASCADE,
     session_token   VARCHAR(128) UNIQUE NOT NULL,    -- anonymous session
     tier            INTEGER NOT NULL DEFAULT 1,       -- 1, 2, or 3
     intake_data     JSONB DEFAULT '{}',               -- collected field answers

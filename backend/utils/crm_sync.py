@@ -7,7 +7,7 @@ from engine.schemas import VerdictCategory
 
 logger = logging.getLogger(__name__)
 
-def sync_state_to_crm(session_id: str, state_dict: dict):
+def sync_state_to_crm(session_id: str, state_dict: dict, user_id=None, user_name="Anonymous User"):
     """
     Syncs the current conversation state into the Postgres CRM tables.
     """
@@ -16,7 +16,7 @@ def sync_state_to_crm(session_id: str, state_dict: dict):
         # 1. Update or Create AssessmentSession
         db_session = db.query(AssessmentSession).filter(AssessmentSession.session_token == session_id).first()
         if not db_session:
-            db_session = AssessmentSession(session_token=session_id)
+            db_session = AssessmentSession(session_token=session_id, user_id=user_id)
             db.add(db_session)
         
         db_session.intake_data = state_dict.get("intake_data", {})
@@ -69,7 +69,7 @@ def sync_state_to_crm(session_id: str, state_dict: dict):
             if not db_lead.state:
                 db_lead.state = intake.get("state", "Unknown")
             if not db_lead.name:
-                db_lead.name = "Anonymous User" # Would come from auth or Tier 2
+                db_lead.name = user_name
             
             db_lead.status = db_lead.status or "new"
             db.commit()

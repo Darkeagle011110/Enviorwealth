@@ -87,18 +87,36 @@ class KnowledgeChunk(Base):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Client Users
+# ──────────────────────────────────────────────────────────────────────────────
+class ClientUser(Base):
+    __tablename__ = "client_users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(Text, nullable=False)
+    full_name = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    sessions = relationship("AssessmentSession", back_populates="user", cascade="all, delete-orphan")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Assessment Sessions & Gate Results
 # ──────────────────────────────────────────────────────────────────────────────
 class AssessmentSession(Base):
     __tablename__ = "assessment_sessions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("client_users.id", ondelete="CASCADE"))
     session_token = Column(String(128), unique=True, nullable=False)
     tier = Column(Integer, nullable=False, default=1)
     intake_data = Column(JSONB, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    user = relationship("ClientUser", back_populates="sessions")
     gate_results = relationship("GateResultRecord", back_populates="session", cascade="all, delete-orphan")
     assessments = relationship("Assessment", back_populates="session", cascade="all, delete-orphan")
 

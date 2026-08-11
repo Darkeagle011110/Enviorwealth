@@ -37,12 +37,20 @@ ADAPTER_MAP = {
 # Available models per provider (for admin panel dropdown)
 PROVIDER_MODELS = {
     "claude": [
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022",
-        "claude-3-opus-20240229",
-        "claude-3-haiku-20240307",
+        "claude-fable-5",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-haiku-4-5",
     ],
-    "openai": ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
+    "openai": [
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-5.6-luna",
+        "gpt-5.4",
+        "gpt-5.4-pro",
+        "gpt-5.4-mini",
+        "gpt-5.4-nano"
+    ],
     "groq": [
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",

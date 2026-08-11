@@ -4,11 +4,19 @@ from typing import Dict
 from openai import AsyncOpenAI
 from .base_adapter import BaseLLMAdapter, LLMResponse
 
-SUPPORTED_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
+SUPPORTED_MODELS = [
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "gpt-5.6-luna",
+    "gpt-5.4",
+    "gpt-5.4-pro",
+    "gpt-5.4-mini",
+    "gpt-5.4-nano"
+]
 
 
 class OpenAIAdapter(BaseLLMAdapter):
-    def __init__(self, api_key: str, model_name: str = "gpt-4o", extra_params: Dict = None):
+    def __init__(self, api_key: str, model_name: str = "gpt-5.6-sol", extra_params: Dict = None):
         super().__init__(api_key, model_name, extra_params)
         self.client = AsyncOpenAI(api_key=api_key)
 
