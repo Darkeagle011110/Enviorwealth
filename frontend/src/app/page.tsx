@@ -111,26 +111,26 @@ const FIELD_LABELS: Record<string, string> = {
 // ─── Inline SVG Icons ─────────────────────────────────────────────────────────
 const LeafIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
-    <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
+    <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
   </svg>
 );
 
 const SendIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+    <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
   </svg>
 );
 
 const MapIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
+    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" /><line x1="9" y1="3" x2="9" y2="18" /><line x1="15" y1="6" x2="15" y2="21" />
   </svg>
 );
 
 const ChevronIcon = ({ open }: { open: boolean }) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s ease" }}>
-    <polyline points="6 9 12 15 18 9"/>
+    <polyline points="6 9 12 15 18 9" />
   </svg>
 );
 
@@ -409,29 +409,42 @@ function CashFlowCurve({ firstIssuance }: { firstIssuance: number }) {
 
 function MessageBubble({ msg, isNew }: { msg: Message; isNew: boolean }) {
   const isUser = msg.role === "user";
+  const timeString = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now";
+
   return (
     <div style={{
       display: "flex",
       justifyContent: isUser ? "flex-end" : "flex-start",
-      marginBottom: "12px",
+      marginBottom: "24px",
       animation: isNew ? (isUser ? "slideInRight 0.3s ease" : "slideInLeft 0.3s ease") : "none",
     }}>
       {!isUser && (
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "var(--color-emerald-glow)", border: "1px solid var(--color-emerald-dim)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: "8px", marginTop: "2px", color: "var(--color-emerald)" }}>
+        <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#f0f4f1", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: "12px", color: "var(--color-emerald-deep)" }}>
           <LeafIcon />
         </div>
       )}
-      <div style={{
-        maxWidth: "82%",
-        padding: "12px 16px",
-        borderRadius: isUser ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-        background: isUser ? "linear-gradient(135deg, var(--color-emerald-dim), #1d6648)" : "var(--color-bg-card)",
-        border: `1px solid ${isUser ? "var(--color-emerald-dim)" : "var(--color-border)"}`,
-        boxShadow: isUser ? "var(--shadow-emerald)" : "none",
-      }}>
-        <p style={{ fontSize: "13.5px", lineHeight: 1.65, color: isUser ? "#e8f5f0" : "var(--color-text-secondary)", whiteSpace: "pre-wrap" }}>
-          {msg.content}
-        </p>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', maxWidth: "70%" }}>
+        <div style={{
+          padding: "16px",
+          width: "fit-content",
+          borderRadius: isUser ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+          background: isUser ? "#e8f2ec" : "#ffffff",
+          border: isUser ? "none" : "1px solid rgba(229, 231, 235, 0.5)",
+          boxShadow: isUser ? "none" : "0 2px 10px rgba(0,0,0,0.02)",
+        }}>
+          <p style={{ fontSize: "14px", lineHeight: 1.65, color: isUser ? "#1e563b" : "var(--color-text-primary)", whiteSpace: "pre-wrap", marginBottom: "8px" }}>
+            {msg.content.split(/(\*\*.*?\*\*)/g).map((part, index) => {
+              if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={index} style={{ fontWeight: 700 }}>{part.slice(2, -2)}</strong>;
+              }
+              return <span key={index}>{part}</span>;
+            })}
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: isUser ? 'flex-end' : 'flex-start', gap: '4px' }}>
+            <span style={{ fontSize: '11px', color: isUser ? '#5b8c72' : 'var(--color-text-muted)' }}>{timeString}</span>
+            {isUser && <span style={{ color: 'var(--color-emerald)', fontSize: '14px', marginLeft: '2px', lineHeight: 1 }}>✔✔</span>}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -439,43 +452,81 @@ function MessageBubble({ msg, isNew }: { msg: Message; isNew: boolean }) {
 
 function EligibilityModal({ onClose, onSubmit }: { onClose: () => void, onSubmit: (data: any) => void }) {
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    state: "",
-    district: "",
-    area_ha: "",
-    tenure_type: "",
-    land_legal_class: "",
-    existing_tree_cover_pct: "",
-    planting_status: "",
-    would_plant_anyway: ""
-  });
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [schema, setSchema] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/v1/eligibility-form`)
+      .then(res => res.json())
+      .then(data => {
+        // If there's no schema setup yet, we can provide a fallback or just use the data
+        if (!data || !data.steps || data.steps.length === 0) {
+          // Provide a fallback schema if backend is empty during development
+          setSchema({
+             steps: [
+               { step_id: "s1", title: "Where is your land located?", description: "Please provide the state and district.", fields: [
+                 { field_id: "state", label: "State", type: "text", required: true },
+                 { field_id: "district", label: "District", type: "text", required: true }
+               ]}
+             ]
+          });
+        } else {
+          setSchema(data);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load schema", err);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ background: "var(--color-bg-panel)", padding: "32px", borderRadius: "var(--radius-xl)" }}>Loading form...</div>
+      </div>
+    );
+  }
+
+  const steps = schema.steps;
+  const currentStep = steps[step - 1];
 
   const handleNext = () => {
-    if (step === 1 && (!formData.state || !formData.district)) return alert("Please select state and district");
-    if (step === 2 && !formData.area_ha) return alert("Please enter land area");
-    if (step === 3 && !formData.tenure_type) return alert("Please select tenure type");
-    if (step === 4 && !formData.land_legal_class) return alert("Please select legal class");
-    if (step === 5 && !formData.existing_tree_cover_pct) return alert("Please enter tree cover percentage");
-    
-    if (step < 6) {
+    // Validate current step
+    for (const field of currentStep.fields) {
+      if (field.required && !formData[field.field_id]) {
+        return alert(`Please fill out: ${field.label}`);
+      }
+    }
+
+    if (step < steps.length) {
       setStep(step + 1);
     } else {
-      if (!formData.planting_status || !formData.would_plant_anyway) return alert("Please answer all questions");
-      // Format area and tree cover as numbers
-      const submission = {
-        ...formData,
-        area_ha: parseFloat(formData.area_ha) || 0,
-        existing_tree_cover_pct: parseFloat(formData.existing_tree_cover_pct) || 0
-      };
+      // Submission
+      // Format number fields
+      const submission = { ...formData };
+      for (const s of steps) {
+        for (const f of s.fields) {
+          if (f.type === "number" && submission[f.field_id]) {
+            submission[f.field_id] = parseFloat(submission[f.field_id]) || 0;
+          }
+        }
+      }
       onSubmit(submission);
     }
+  };
+
+  const updateField = (id: string, val: any) => {
+    setFormData(prev => ({ ...prev, [id]: val }));
   };
 
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
       <div style={{ background: "var(--color-bg-panel)", borderRadius: "var(--radius-xl)", width: "100%", maxWidth: "500px", padding: "32px", position: "relative", boxShadow: "var(--shadow-panel)", border: "1px solid var(--color-border)" }}>
         <button onClick={onClose} style={{ position: "absolute", top: "20px", right: "20px", background: "none", border: "none", color: "var(--color-text-muted)", cursor: "pointer", fontSize: "20px" }}>&times;</button>
-        
+
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "var(--color-emerald-glow)", border: "1px solid var(--color-emerald-dim)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-emerald)", margin: "0 auto 16px" }}>
             <LeafIcon />
@@ -486,120 +537,64 @@ function EligibilityModal({ onClose, onSubmit }: { onClose: () => void, onSubmit
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", position: "relative" }}>
           <div style={{ position: "absolute", top: "50%", left: "15px", right: "15px", height: "2px", background: "var(--color-bg-deep)", zIndex: 0 }} />
-          {[1,2,3,4,5,6].map(i => (
-            <div key={i} style={{ width: "30px", height: "30px", borderRadius: "50%", background: i <= step ? "var(--color-emerald)" : "var(--color-bg-deep)", border: `2px solid ${i <= step ? "var(--color-emerald)" : "var(--color-border)"}`, color: i <= step ? "#fff" : "var(--color-text-muted)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 600, position: "relative", zIndex: 1, transition: "all 0.3s ease" }}>
-              {i}
-            </div>
-          ))}
+          {steps.map((_: any, idx: number) => {
+            const i = idx + 1;
+            return (
+              <div key={i} style={{ width: "30px", height: "30px", borderRadius: "50%", background: i <= step ? "var(--color-emerald)" : "var(--color-bg-deep)", border: `2px solid ${i <= step ? "var(--color-emerald)" : "var(--color-border)"}`, color: i <= step ? "#fff" : "var(--color-text-muted)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 600, position: "relative", zIndex: 1, transition: "all 0.3s ease" }}>
+                {i}
+              </div>
+            );
+          })}
         </div>
-        <div style={{ textAlign: "center", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "24px", fontWeight: 600, textTransform: "uppercase" }}>Step {step} of 6</div>
+        <div style={{ textAlign: "center", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "24px", fontWeight: 600, textTransform: "uppercase" }}>Step {step} of {steps.length}</div>
 
         <div style={{ minHeight: "180px" }}>
-          {step === 1 && (
-            <div>
-              <h3 style={{ fontSize: "15px", fontWeight: 600, marginBottom: "8px" }}>1. Where is your land located?</h3>
-              <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", marginBottom: "16px" }}>Please provide the state and district of your land.</p>
-              <div style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: "block", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>State <span style={{ color: "var(--color-amber)" }}>*</span></label>
-                  <select value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }}>
-                    <option value="">Select State</option>
-                    <option value="Gujarat">Gujarat</option>
-                    <option value="Maharashtra">Maharashtra</option>
-                    <option value="Madhya Pradesh">Madhya Pradesh</option>
-                  </select>
+          <div>
+            <h3 style={{ fontSize: "15px", fontWeight: 600, marginBottom: "8px" }}>{currentStep.title}</h3>
+            {currentStep.description && <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", marginBottom: "16px" }}>{currentStep.description}</p>}
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {currentStep.fields.map((f: any) => (
+                <div key={f.field_id}>
+                  <label style={{ display: "block", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>
+                    {f.label} {f.required && <span style={{ color: "var(--color-amber)" }}>*</span>}
+                  </label>
+                  
+                  {f.type === "select" ? (
+                    <select 
+                      value={formData[f.field_id] || ""} 
+                      onChange={e => updateField(f.field_id, e.target.value)} 
+                      style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }}
+                    >
+                      <option value="">Select an option</option>
+                      {(f.options || []).map((opt: string) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : f.type === "boolean" ? (
+                    <select 
+                      value={formData[f.field_id] || ""} 
+                      onChange={e => updateField(f.field_id, e.target.value === "true")} 
+                      style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }}
+                    >
+                      <option value="">Select an option</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  ) : (
+                    <input 
+                      type={f.type === "number" ? "number" : "text"} 
+                      placeholder={f.placeholder || ""} 
+                      value={formData[f.field_id] || ""} 
+                      onChange={e => updateField(f.field_id, e.target.value)} 
+                      style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }} 
+                    />
+                  )}
+                  {f.description && <div style={{ fontSize: "10px", color: "var(--color-text-muted)", marginTop: "4px" }}>{f.description}</div>}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: "block", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>District <span style={{ color: "var(--color-amber)" }}>*</span></label>
-                  <select value={formData.district} onChange={e => setFormData({...formData, district: e.target.value})} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }}>
-                    <option value="">Select District</option>
-                    <option value="Ahmedabad">Ahmedabad</option>
-                    <option value="Surat">Surat</option>
-                    <option value="Pune">Pune</option>
-                  </select>
-                </div>
-              </div>
+              ))}
             </div>
-          )}
-          
-          {step === 2 && (
-            <div>
-              <h3 style={{ fontSize: "15px", fontWeight: 600, marginBottom: "8px" }}>2. How large is the land?</h3>
-              <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", marginBottom: "16px" }}>The economics of carbon projects depend heavily on scale.</p>
-              <div>
-                <label style={{ display: "block", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>Area (in Hectares) <span style={{ color: "var(--color-amber)" }}>*</span></label>
-                <input type="number" placeholder="e.g. 5" value={formData.area_ha} onChange={e => setFormData({...formData, area_ha: e.target.value})} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }} />
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div>
-              <h3 style={{ fontSize: "15px", fontWeight: 600, marginBottom: "8px" }}>3. What is your tenure status?</h3>
-              <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", marginBottom: "16px" }}>Tenure affects who holds the carbon rights.</p>
-              <div>
-                <select value={formData.tenure_type} onChange={e => setFormData({...formData, tenure_type: e.target.value})} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }}>
-                  <option value="">Select Tenure Type</option>
-                  <option value="owned">Owned Outright</option>
-                  <option value="leased">Leased</option>
-                  <option value="community">Community / Panchayat Land</option>
-                  <option value="government">Government-granted</option>
-                  <option value="disputed">Disputed</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div>
-              <h3 style={{ fontSize: "15px", fontWeight: 600, marginBottom: "8px" }}>4. Land Legal Classification</h3>
-              <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", marginBottom: "16px" }}>Planting on recorded forest land is generally ineligible.</p>
-              <div>
-                <select value={formData.land_legal_class} onChange={e => setFormData({...formData, land_legal_class: e.target.value})} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }}>
-                  <option value="">Select Legal Classification</option>
-                  <option value="revenue fallow">Revenue Fallow</option>
-                  <option value="revenue agricultural">Revenue Agricultural</option>
-                  <option value="recorded forest">Recorded Forest</option>
-                  <option value="wasteland">Wasteland</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {step === 5 && (
-            <div>
-              <h3 style={{ fontSize: "15px", fontWeight: 600, marginBottom: "8px" }}>5. Existing Tree Cover</h3>
-              <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", marginBottom: "16px" }}>Roughly what percentage of your land currently has tree cover?</p>
-              <div>
-                <label style={{ display: "block", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>Tree Cover Percentage (0-100%) <span style={{ color: "var(--color-amber)" }}>*</span></label>
-                <input type="number" min="0" max="100" placeholder="e.g. 10" value={formData.existing_tree_cover_pct} onChange={e => setFormData({...formData, existing_tree_cover_pct: e.target.value})} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }} />
-              </div>
-            </div>
-          )}
-
-          {step === 6 && (
-            <div>
-              <h3 style={{ fontSize: "15px", fontWeight: 600, marginBottom: "8px" }}>6. Planting & Additionality</h3>
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>Have you already started planting trees? <span style={{ color: "var(--color-amber)" }}>*</span></label>
-                <select value={formData.planting_status} onChange={e => setFormData({...formData, planting_status: e.target.value})} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }}>
-                  <option value="">Select Status</option>
-                  <option value="not started yet">Not started yet</option>
-                  <option value="planning to plant this year">Planning to plant this year</option>
-                  <option value="planted within the last 2-5 years">Planted within the last 2-5 years</option>
-                  <option value="planted more than 5 years ago">Planted more than 5 years ago</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>Would you plant trees even without carbon credit income? <span style={{ color: "var(--color-amber)" }}>*</span></label>
-                <select value={formData.would_plant_anyway} onChange={e => setFormData({...formData, would_plant_anyway: e.target.value})} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }}>
-                  <option value="">Select Answer</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </div>
-            </div>
-          )}
+          </div>
 
           <div style={{ display: "flex", gap: "12px", padding: "12px", background: "var(--color-emerald-glow)", border: "1px solid var(--color-emerald-dim)", borderRadius: "var(--radius-sm)", marginTop: "24px" }}>
             <div style={{ color: "var(--color-emerald)", fontSize: "18px" }}>🛡️</div>
@@ -612,7 +607,7 @@ function EligibilityModal({ onClose, onSubmit }: { onClose: () => void, onSubmit
 
         <div style={{ display: "flex", gap: "12px", marginTop: "24px", flexDirection: "row-reverse" }}>
           <button onClick={handleNext} style={{ flex: 1, padding: "12px", background: "var(--color-emerald)", color: "#000", border: "none", borderRadius: "var(--radius-sm)", fontWeight: 600, cursor: "pointer", transition: "all 0.2s ease" }}>
-            {step === 6 ? "Submit Assessment" : "Next →"}
+            {step === steps.length ? "Submit Assessment" : "Next →"}
           </button>
           {step > 1 && (
             <button onClick={() => setStep(step - 1)} style={{ padding: "12px 24px", background: "transparent", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontWeight: 500, cursor: "pointer" }}>
@@ -637,7 +632,7 @@ function SplashScreen({ onDismiss }: { onDismiss: () => void }) {
   }, [onDismiss]);
 
   return (
-    <div 
+    <div
       onClick={onDismiss}
       style={{
         position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
@@ -673,7 +668,66 @@ export default function Home() {
   const [showEligibilityModal, setShowEligibilityModal] = useState(false);
   const [newMessageIndex, setNewMessageIndex] = useState<number>(-1);
   const [showSplash, setShowSplash] = useState(false);
-  
+  const [isListening, setIsListening] = useState(false);
+  const [audioVolumes, setAudioVolumes] = useState<number[]>(new Array(60).fill(3));
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    if (isListening) {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+        streamRef.current = stream;
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        const audioCtx = new AudioContext();
+        audioContextRef.current = audioCtx;
+
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64; // Small fftSize for fewer frequency bins
+        analyserRef.current = analyser;
+
+        const source = audioCtx.createMediaStreamSource(stream);
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        const updateVolumes = () => {
+          analyser.getByteFrequencyData(dataArray);
+          // We have 60 bars. Let's map the frequency data to heights (min 3px, max 24px)
+          const newVolumes = [];
+          for (let i = 0; i < 60; i++) {
+            // Map index to frequency bin, slightly smoothing it out
+            const binIndex = Math.floor((i / 60) * (analyser.frequencyBinCount * 0.5));
+            const value = dataArray[binIndex] || 0;
+            // Normalize value (0-255) to height (3-24)
+            const height = 3 + (value / 255) * 21;
+            newVolumes.push(height);
+          }
+          setAudioVolumes(newVolumes);
+          animationFrameRef.current = requestAnimationFrame(updateVolumes);
+        };
+
+        updateVolumes();
+      }).catch(err => {
+        console.error("Microphone access denied or error:", err);
+        // Fallback to straight line if denied
+        setAudioVolumes(new Array(60).fill(3));
+      });
+    } else {
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (audioContextRef.current) audioContextRef.current.close();
+      if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+      setAudioVolumes(new Array(60).fill(3));
+    }
+
+    return () => {
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (audioContextRef.current) audioContextRef.current.close();
+      if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+    };
+  }, [isListening]);
+
   const { token, user, logout } = useAuthStore();
 
   useEffect(() => {
@@ -771,12 +825,12 @@ export default function Home() {
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "var(--color-bg-deep)", fontFamily: "var(--font-sans)" }}>
-      {token && <Sidebar onSelectSession={(id: string) => setSessionId(id)} currentSessionId={sessionId} onNewAssessment={() => {setSessionId(null); setMessages([{role: "assistant", content: "Let's start a new assessment.", timestamp: new Date()}]); setUiState({}); setMemo(null);}} />}
-      
+      {token && <Sidebar onSelectSession={(id: string) => setSessionId(id)} currentSessionId={sessionId} onNewAssessment={() => { setSessionId(null); setMessages([{ role: "assistant", content: "Let's start a new assessment.", timestamp: new Date() }]); setUiState({}); setMemo(null); }} />}
+
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header style={{ flexShrink: 0, borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-panel)", padding: "0 24px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", height: "56px", gap: "16px" }}>
+        {/* ── Header ─────────────────────────────────────────────────────────── */}
+        <header style={{ flexShrink: 0, borderBottom: "1px solid var(--color-border)", background: "var(--color-bg-base)", padding: "0 24px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", height: "64px", gap: "12px" }}>
             {isScreening && (
               <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "5px 12px", background: "var(--color-emerald-deep)", border: "1px solid var(--color-border-strong)", borderRadius: "var(--radius-full)", animation: "fadeIn 0.3s ease" }}>
                 <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--color-emerald)", animation: "pulse-emerald 1.5s infinite" }} />
@@ -788,159 +842,175 @@ export default function Home() {
             <button
               id="toggle-map-btn"
               onClick={() => setShowMap(v => !v)}
-              style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", background: showMap ? "var(--color-emerald-glow)" : "transparent", border: `1px solid ${showMap ? "var(--color-emerald-dim)" : "var(--color-border)"}`, borderRadius: "var(--radius-sm)", cursor: "pointer", fontSize: "12px", color: showMap ? "var(--color-emerald)" : "var(--color-text-muted)", transition: "all 0.2s ease" }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "var(--color-bg-panel)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", cursor: "pointer", fontSize: "13px", fontWeight: 500, color: "var(--color-text-primary)", transition: "all 0.2s ease", boxShadow: "var(--shadow-card)" }}
             >
               <MapIcon />
               <span>Map</span>
             </button>
-            <span style={{ fontSize: "10px", color: "var(--color-text-disabled)", padding: "4px 8px", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)" }}>Screening only — not legal/financial advice</span>
+            <span style={{ fontSize: "12px", color: "var(--color-text-muted)", padding: "8px 16px", background: "#f3f4f6", border: "none", borderRadius: "var(--radius-full)" }}>Screening only — not legal/financial advice</span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px', cursor: 'pointer' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--color-emerald-deep)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '14px' }}>C</div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" color="var(--color-text-primary)"><polyline points="6 9 12 15 18 9" /></svg>
+            </div>
+
             {user && (
-               <button onClick={logout} style={{ padding: '6px 12px', background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '12px' }}>Logout ({user.full_name})</button>
+              <button onClick={logout} style={{ padding: '6px 12px', background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '12px', marginLeft: '8px' }}>Logout</button>
             )}
-        </div>
-      </header>
-
-      {/* ── Body ───────────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden", width: "100%" }}>
-
-        {/* Chat panel */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-          <div ref={chatContainerRef} style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
-
-            {/* Progress bar */}
-            {isScreening && uiState.filled_fields !== undefined && (
-              <ProgressBar
-                progress={progress}
-                filledFields={uiState.filled_fields}
-                totalFields={uiState.total_fields ?? 6}
-                currentField={uiState.current_field}
-              />
-            )}
-
-            {/* Messages */}
-            {messages.map((msg, i) => {
-              if (msg.role === 'user' && msg.content.includes('"eligibility_form"')) {
-                return (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-                    <div style={{ background: 'var(--color-bg-panel)', border: '1px solid var(--color-emerald-dim)', borderRadius: '16px 16px 4px 16px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <LeafIcon />
-                      <span style={{ fontSize: '13px', color: 'var(--color-emerald)' }}>Submitted Eligibility Assessment Form</span>
-                    </div>
-                  </div>
-                );
-              }
-              return <MessageBubble key={i} msg={msg} isNew={i === newMessageIndex} />;
-            })}
-
-            {/* Typing indicator */}
-            {isLoading && <TypingIndicator />}
-
-            {/* Verdict card */}
-            {verdictReady && memo && (
-              <div style={{ marginTop: "20px", animation: "revealUp 0.5s var(--ease-spring)" }}>
-                <VerdictCard memo={memo} />
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
           </div>
+        </header>
+        {/* ── Body ───────────────────────────────────────────────────────────── */}
+        <div style={{ flex: 1, display: "flex", overflow: "hidden", width: "100%" }}>
 
-          {/* Input area */}
-          <div style={{ flexShrink: 0, padding: "16px 24px", borderTop: "1px solid var(--color-border)", background: "var(--color-bg-panel)" }}>
-            <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
-              <div style={{ flex: 1, position: "relative" }}>
-                <textarea
-                  ref={inputRef}
-                  id="chat-input"
-                  value={input}
-                  onChange={handleTextareaChange}
-                  onKeyDown={handleKeyDown}
-                  disabled={isLoading}
-                  placeholder="Type your message, or draw on the map to auto-fill your location…"
-                  rows={1}
-                  style={{
-                    width: "100%",
-                    resize: "none",
-                    background: "var(--color-bg-input)",
-                    border: `1px solid ${input ? "var(--color-border-strong)" : "var(--color-border)"}`,
-                    borderRadius: "var(--radius-md)",
-                    padding: "12px 16px",
-                    fontSize: "13.5px",
-                    color: "var(--color-text-primary)",
-                    outline: "none",
-                    lineHeight: 1.5,
-                    minHeight: "44px",
-                    maxHeight: "120px",
-                    fontFamily: "var(--font-sans)",
-                    transition: "border-color 0.2s ease, box-shadow 0.2s ease",
-                    boxShadow: input ? "var(--shadow-input)" : "none",
-                  }}
-                  onFocus={e => { e.target.style.borderColor = "var(--color-border-focus)"; e.target.style.boxShadow = "var(--shadow-input)"; }}
-                  onBlur={e => { e.target.style.borderColor = input ? "var(--color-border-strong)" : "var(--color-border)"; e.target.style.boxShadow = "none"; }}
+          {/* Chat panel */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <div ref={chatContainerRef} style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+
+              {/* Progress bar */}
+              {isScreening && uiState.filled_fields !== undefined && (
+                <ProgressBar
+                  progress={progress}
+                  filledFields={uiState.filled_fields}
+                  totalFields={uiState.total_fields ?? 6}
+                  currentField={uiState.current_field}
                 />
-              </div>
-              <button
-                id="send-btn"
-                onClick={() => sendMessage(input)}
-                disabled={isLoading || !input.trim()}
-                style={{
-                  width: "44px",
-                  height: "44px",
-                  borderRadius: "var(--radius-md)",
-                  background: input.trim() && !isLoading ? "var(--color-emerald)" : "var(--color-bg-card)",
-                  border: `1px solid ${input.trim() && !isLoading ? "var(--color-emerald)" : "var(--color-border)"}`,
-                  cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: input.trim() && !isLoading ? "#050e0a" : "var(--color-text-disabled)",
-                  flexShrink: 0,
-                  transition: "all 0.2s ease",
-                  transform: input.trim() && !isLoading ? "scale(1)" : "scale(0.95)",
-                }}
-              >
-                <SendIcon />
-              </button>
+              )}
+
+              {/* Messages */}
+              {messages.map((msg, i) => {
+                if (msg.role === 'user' && msg.content.includes('"eligibility_form"')) {
+                  return (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                      <div style={{ background: 'var(--color-bg-panel)', border: '1px solid var(--color-emerald-dim)', borderRadius: '16px 16px 4px 16px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <LeafIcon />
+                        <span style={{ fontSize: '13px', color: 'var(--color-emerald)' }}>Submitted Eligibility Assessment Form</span>
+                      </div>
+                    </div>
+                  );
+                }
+                return <MessageBubble key={i} msg={msg} isNew={i === newMessageIndex} />;
+              })}
+
+              {/* Typing indicator */}
+              {isLoading && <TypingIndicator />}
+
+              {/* Verdict card */}
+              {verdictReady && memo && (
+                <div style={{ marginTop: "20px", animation: "revealUp 0.5s var(--ease-spring)" }}>
+                  <VerdictCard memo={memo} />
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
-            <p style={{ marginTop: "8px", fontSize: "10px", color: "var(--color-text-disabled)", textAlign: "center" }}>
-              Press Enter to send · Shift+Enter for new line · This tool provides screening guidance only
-            </p>
+
+            {/* Input area */}
+            <div style={{ flexShrink: 0, padding: "24px", background: "var(--color-bg-base)", display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+
+              {/* Input Wrapper */}
+              <div style={{ position: "relative", width: "100%", maxWidth: "800px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", width: "100%", background: "white", borderRadius: "99px", padding: "8px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", border: "1px solid rgba(229,231,235,0.8)", minHeight: "56px" }}>
+                  
+                  {isListening ? (
+                    <>
+                      <button style={{ width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "#d1d5db", background: "transparent", border: "none" }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+                      </button>
+                      
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 16px', overflow: 'hidden' }}>
+                        {/* Audio visualizer */}
+                        {audioVolumes.map((h, i) => (
+                          <div key={i} style={{ 
+                            width: '3px', 
+                            height: `${h}px`, 
+                            background: i > 40 ? '#d1d5db' : '#9ca3af', 
+                            borderRadius: '2px', 
+                            transition: 'height 0.05s ease'
+                          }} />
+                        ))}
+                      </div>
+                      
+                      <button onClick={() => setIsListening(false)} style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", color: "#4b5563", border: "none", cursor: "pointer", marginRight: "8px" }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      </button>
+                      <button onClick={() => setIsListening(false)} style={{ width: "36px", height: "36px", borderRadius: "50%", background: "white", border: "2px solid black", display: "flex", alignItems: "center", justifyContent: "center", color: "black", cursor: "pointer" }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button style={{ width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280", background: "transparent", border: "none", cursor: "pointer" }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+                      </button>
+                      
+                      <div style={{ flex: 1, position: "relative" }}>
+                        <textarea
+                          ref={inputRef}
+                          id="chat-input"
+                          value={input}
+                          onChange={handleTextareaChange}
+                          onKeyDown={handleKeyDown}
+                          disabled={isLoading}
+                          placeholder=""
+                          rows={1}
+                          style={{
+                            width: "100%", resize: "none", background: "transparent", border: "none",
+                            padding: "8px 12px", fontSize: "15px", color: "var(--color-text-primary)", outline: "none",
+                            lineHeight: 1.5, maxHeight: "120px", fontFamily: "var(--font-sans)",
+                          }}
+                        />
+                      </div>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        
+                        <button onClick={() => setIsListening(true)} style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#374151", background: "transparent", border: "none", cursor: "pointer" }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                        </button>
+                        
+                        <button onClick={() => sendMessage(input)} disabled={isLoading || !input.trim()} style={{ width: "36px", height: "36px", borderRadius: "50%", background: input.trim() && !isLoading ? "black" : "black", border: "none", cursor: input.trim() && !isLoading ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Map panel */}
+          {showMap && (
+            <div style={{ width: "40%", minWidth: "320px", maxWidth: "520px", borderLeft: "1px solid var(--color-border)", background: "var(--color-bg-panel)", display: "flex", flexDirection: "column", animation: "slideInRight 0.3s ease" }}>
+              <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-border)" }}>
+                <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--color-text-primary)", marginBottom: "2px" }}>Draw Your Land Parcel</h3>
+                <p style={{ fontSize: "11px", color: "var(--color-text-muted)" }}>Use the polygon tool to outline your land. Satellite data (tree cover, rainfall zone) will be fetched automatically.</p>
+              </div>
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-bg-deep)", padding: "24px" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "48px", marginBottom: "12px", opacity: 0.3 }}>🗺️</div>
+                  <p style={{ fontSize: "12px", color: "var(--color-text-muted)", lineHeight: 1.5 }}>
+                    Map integration requires a Mapbox/MapLibre API key.<br />
+                    Configure <code style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "var(--color-emerald-dim)" }}>NEXT_PUBLIC_MAPBOX_TOKEN</code> in your <code style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "var(--color-emerald-dim)" }}>.env</code> file.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
 
-        {/* Map panel */}
-        {showMap && (
-          <div style={{ width: "40%", minWidth: "320px", maxWidth: "520px", borderLeft: "1px solid var(--color-border)", background: "var(--color-bg-panel)", display: "flex", flexDirection: "column", animation: "slideInRight 0.3s ease" }}>
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-border)" }}>
-              <h3 style={{ fontSize: "13px", fontWeight: 700, color: "var(--color-text-primary)", marginBottom: "2px" }}>Draw Your Land Parcel</h3>
-              <p style={{ fontSize: "11px", color: "var(--color-text-muted)" }}>Use the polygon tool to outline your land. Satellite data (tree cover, rainfall zone) will be fetched automatically.</p>
-            </div>
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-bg-deep)", padding: "24px" }}>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "48px", marginBottom: "12px", opacity: 0.3 }}>🗺️</div>
-                <p style={{ fontSize: "12px", color: "var(--color-text-muted)", lineHeight: 1.5 }}>
-                  Map integration requires a Mapbox/MapLibre API key.<br />
-                  Configure <code style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "var(--color-emerald-dim)" }}>NEXT_PUBLIC_MAPBOX_TOKEN</code> in your <code style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "var(--color-emerald-dim)" }}>.env</code> file.
-                </p>
-              </div>
-            </div>
-          </div>
+        {showEligibilityModal && (
+          <EligibilityModal
+            onClose={() => setShowEligibilityModal(false)}
+            onSubmit={(data) => {
+              setShowEligibilityModal(false);
+              sendMessage(JSON.stringify({ eligibility_form: data }));
+            }}
+          />
         )}
 
-      </div>
-
-      {showEligibilityModal && (
-        <EligibilityModal 
-          onClose={() => setShowEligibilityModal(false)}
-          onSubmit={(data) => {
-            setShowEligibilityModal(false);
-            sendMessage(JSON.stringify({ eligibility_form: data }));
-          }}
-        />
-      )}
-      
-      {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
-      {!showSplash && !token && <AuthModal />}
+        {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
+        {!showSplash && !token && <AuthModal />}
       </div>
     </div>
   );

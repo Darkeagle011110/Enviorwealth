@@ -2,51 +2,51 @@
 
 /* ─── Design System Tokens ─────────────────────────────────────────────────── */
 :root {
-  /* Palette */
-  --color-bg-deep:        #050e0a;
-  --color-bg-base:        #081410;
-  --color-bg-panel:       #0d1f18;
-  --color-bg-card:        #122519;
-  --color-bg-card-hover:  #19302a;
-  --color-bg-input:       #0a1a13;
-  --color-bg-overlay:     rgba(5,14,10,0.85);
+  /* Palette - Light Theme */
+  --color-bg-deep:        #f0f4f1; /* App background */
+  --color-bg-base:        #f9fafb; /* Lighter background */
+  --color-bg-panel:       #ffffff; /* Sidebar / Cards */
+  --color-bg-card:        #ffffff;
+  --color-bg-card-hover:  #f3f4f6;
+  --color-bg-input:       #ffffff;
+  --color-bg-overlay:     rgba(255,255,255,0.85);
 
-  --color-border:         rgba(52,211,153,0.12);
-  --color-border-strong:  rgba(52,211,153,0.25);
-  --color-border-focus:   rgba(52,211,153,0.55);
+  --color-border:         #e5e7eb;
+  --color-border-strong:  #d1d5db;
+  --color-border-focus:   #a7f3d0;
 
-  --color-emerald:        #34d399;
-  --color-emerald-dim:    #1a7a56;
-  --color-emerald-glow:   rgba(52,211,153,0.15);
-  --color-emerald-deep:   rgba(52,211,153,0.06);
+  --color-emerald:        #2b6e4d; /* Primary dark green text/buttons */
+  --color-emerald-dim:    #e6f0e8; /* Light green bubbles */
+  --color-emerald-glow:   #f0fdf4; /* Very light green backgrounds */
+  --color-emerald-deep:   #1f5037;
 
-  --color-amber:          #f59e0b;
-  --color-amber-dim:      rgba(245,158,11,0.12);
+  --color-amber:          #d97706;
+  --color-amber-dim:      #fef3c7;
 
-  --color-red:            #f87171;
-  --color-red-dim:        rgba(248,113,113,0.12);
+  --color-red:            #ef4444;
+  --color-red-dim:        #fee2e2;
 
-  --color-blue:           #60a5fa;
-  --color-blue-dim:       rgba(96,165,250,0.12);
+  --color-blue:           #3b82f6;
+  --color-blue-dim:       #dbeafe;
 
-  --color-sky:            #38bdf8;
-  --color-violet:         #a78bfa;
-  --color-violet-dim:     rgba(167,139,250,0.12);
+  --color-sky:            #0ea5e9;
+  --color-violet:         #8b5cf6;
+  --color-violet-dim:     #ede9fe;
 
-  --color-text-primary:   #e8f5f0;
-  --color-text-secondary: #8fbba0;
-  --color-text-muted:     #4d7a5e;
-  --color-text-disabled:  #2a4033;
+  --color-text-primary:   #111827; /* Near black */
+  --color-text-secondary: #374151; /* Dark gray */
+  --color-text-muted:     #6b7280; /* Gray */
+  --color-text-disabled:  #9ca3af;
 
   /* Typography */
   --font-sans:  'Inter', 'DM Sans', system-ui, sans-serif;
   --font-mono:  'DM Mono', 'Fira Code', monospace;
 
   /* Shadows */
-  --shadow-card:    0 2px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(52,211,153,0.06);
-  --shadow-panel:   0 8px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(52,211,153,0.08);
-  --shadow-emerald: 0 0 32px rgba(52,211,153,0.15);
-  --shadow-input:   0 0 0 1px var(--color-border-focus), 0 0 16px rgba(52,211,153,0.08);
+  --shadow-card:    0 2px 8px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.02);
+  --shadow-panel:   0 4px 24px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
+  --shadow-emerald: 0 0 24px rgba(43,110,77,0.15);
+  --shadow-input:   0 4px 12px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.05);
 
   /* Radii */
   --radius-sm:   6px;
@@ -112,6 +112,11 @@ body {
 @keyframes pulse-emerald {
   0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
   50%       { box-shadow: 0 0 0 8px rgba(52,211,153,0); }
+}
+
+@keyframes pulse-height {
+  0%   { transform: scaleY(0.3); }
+  100% { transform: scaleY(1); }
 }
 
 @keyframes shimmer {

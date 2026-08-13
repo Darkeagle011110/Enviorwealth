@@ -8,17 +8,14 @@ import os, shutil, hashlib
 from datetime import date
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File, Form
-from sqlalchemy.orm import Session
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 
-from models.database import get_db
-from models.orm_models import KnowledgeDocument, KnowledgeChunk
+from models.mongodb import get_db
+from models.schemas import KnowledgeDocumentDoc
 from config.settings import settings
 
 router = APIRouter()
-
-
-
 
 def _file_hash(path: str) -> str:
     h = hashlib.sha256()
@@ -30,27 +27,29 @@ def _file_hash(path: str) -> str:
 
 # ── GET /api/admin/documents ──────────────────────────────────────────────────
 @router.get("/documents")
-async def list_documents(db: Session = Depends(get_db)):
+async def list_documents(db: AsyncIOMotorDatabase = Depends(get_db)):
     """List all active corpus documents with metadata."""
-    docs = db.query(KnowledgeDocument).filter_by(is_active=True).order_by(
-        KnowledgeDocument.created_at.desc()
-    ).all()
+    cursor = db.knowledge_documents.find({"is_active": True}).sort("created_at", -1)
+    docs = await cursor.to_list(length=None)
 
     result = []
     for doc in docs:
-        chunk_count = db.query(KnowledgeChunk).filter_by(document_id=doc.id).count()
+        chunk_count = await db.knowledge_chunks.count_documents({"document_id": doc["id"]})
+        
+        created_at = doc.get("created_at")
+        
         result.append({
-            "id": str(doc.id),
-            "title": doc.title,
-            "version": doc.version,
-            "effective_date": str(doc.effective_date) if doc.effective_date else None,
-            "jurisdiction": doc.jurisdiction,
-            "doc_type": doc.doc_type,
-            "standard_body": doc.standard_body,
-            "retrieval_date": str(doc.retrieval_date),
+            "id": doc["id"],
+            "title": doc.get("title"),
+            "version": doc.get("version"),
+            "effective_date": doc.get("effective_date"),
+            "jurisdiction": doc.get("jurisdiction"),
+            "doc_type": doc.get("doc_type"),
+            "standard_body": doc.get("standard_body"),
+            "retrieval_date": doc.get("retrieval_date"),
             "chunk_count": chunk_count,
-            "source_url": doc.source_url,
-            "created_at": str(doc.created_at),
+            "source_url": doc.get("source_url"),
+            "created_at": created_at.isoformat() if created_at else None,
         })
     return {"documents": result, "total": len(result)}
 
@@ -66,7 +65,7 @@ async def upload_document(
     doc_type: Optional[str] = Form(None),
     standard_body: Optional[str] = Form(None),
     source_url: Optional[str] = Form(None),
-    db: Session = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """
     Upload a new document to the RAG corpus.
@@ -84,37 +83,35 @@ async def upload_document(
     file_hash = _file_hash(file_path)
 
     # Check for duplicate
-    existing = db.query(KnowledgeDocument).filter_by(file_hash=file_hash, is_active=True).first()
+    existing = await db.knowledge_documents.find_one({"file_hash": file_hash, "is_active": True})
     if existing:
         os.remove(file_path)
-        return {"message": "Document already exists in corpus", "document_id": str(existing.id)}
+        return {"message": "Document already exists in corpus", "document_id": existing["id"]}
 
     # Create DB record
-    doc = KnowledgeDocument(
+    doc_record = KnowledgeDocumentDoc(
         title=title,
         version=version,
         publication_date=None,
-        effective_date=date.fromisoformat(effective_date) if effective_date else None,
+        effective_date=effective_date,
         jurisdiction=jurisdiction,
         doc_type=doc_type,
         standard_body=standard_body,
         file_path=file_path,
         file_hash=file_hash,
         source_url=source_url,
-        retrieval_date=date.today(),
+        retrieval_date=str(date.today()),
         is_active=True,
     )
-    db.add(doc)
-    db.commit()
-    db.refresh(doc)
+    await db.knowledge_documents.insert_one(doc_record.model_dump())
 
     # Trigger async chunking + embedding
     # (In production this would be a Celery task; for Phase 1 we do it inline)
     try:
         from rag.chunker import chunk_document
         from rag.embedder import embed_and_store_chunks
-        chunks = chunk_document(file_path, str(doc.id), title)
-        await embed_and_store_chunks(chunks, str(doc.id), db)
+        chunks = chunk_document(file_path, doc_record.id, title)
+        await embed_and_store_chunks(chunks, doc_record.id, title, True)
         chunk_count = len(chunks)
         status = "indexed"
     except Exception as e:
@@ -122,7 +119,7 @@ async def upload_document(
         status = f"upload_ok_indexing_failed: {str(e)[:100]}"
 
     return {
-        "document_id": str(doc.id),
+        "document_id": doc_record.id,
         "title": title,
         "chunk_count": chunk_count,
         "status": status,
@@ -137,16 +134,18 @@ async def replace_document(
     file: UploadFile = File(...),
     version: Optional[str] = Form(None),
     effective_date: Optional[str] = Form(None),
-    db: Session = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """
     Replace an existing document with a new version.
     The old document is soft-deleted (archived, not erased).
     Old chunks are retained with superseded_by pointer; new chunks are indexed.
     """
-    old_doc = db.query(KnowledgeDocument).filter_by(id=doc_id, is_active=True).first()
-    if not old_doc:
+    old_doc_dict = await db.knowledge_documents.find_one({"id": doc_id, "is_active": True})
+    if not old_doc_dict:
         raise HTTPException(status_code=404, detail="Document not found")
+        
+    old_doc = KnowledgeDocumentDoc(**old_doc_dict)
 
     # Save new file
     upload_dir = settings.uploaded_docs_path
@@ -159,34 +158,52 @@ async def replace_document(
     new_hash = _file_hash(new_path)
 
     # Create new doc record
-    new_doc = KnowledgeDocument(
+    new_doc = KnowledgeDocumentDoc(
         title=old_doc.title,
         version=version or old_doc.version,
         jurisdiction=old_doc.jurisdiction,
         doc_type=old_doc.doc_type,
         standard_body=old_doc.standard_body,
-        effective_date=date.fromisoformat(effective_date) if effective_date else old_doc.effective_date,
+        effective_date=effective_date or old_doc.effective_date,
         file_path=new_path,
         file_hash=new_hash,
         source_url=old_doc.source_url,
-        retrieval_date=date.today(),
+        retrieval_date=str(date.today()),
         is_active=True,
     )
-    db.add(new_doc)
-    db.flush()
+    await db.knowledge_documents.insert_one(new_doc.model_dump())
 
     # Soft-delete old doc
-    old_doc.is_active = False
-    old_doc.superseded_by = new_doc.id
-    db.commit()
-    db.refresh(new_doc)
+    await db.knowledge_documents.update_one(
+        {"id": doc_id},
+        {"$set": {"is_active": False, "superseded_by": new_doc.id}}
+    )
+    
+    # Soft delete Qdrant points
+    try:
+        from models.qdrant_client import get_async_qdrant
+        from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+        qdrant = get_async_qdrant()
+        
+        # We find points by document_id and set is_active=False
+        # Note: In Qdrant, we can update payload by filter
+        await qdrant.set_payload(
+            collection_name=settings.qdrant_collection_name,
+            payload={"is_active": False},
+            points=Filter(
+                must=[FieldCondition(key="document_id", match=MatchValue(value=doc_id))]
+            )
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to soft delete old Qdrant chunks: {e}")
 
     # Re-index new document
     try:
         from rag.chunker import chunk_document
         from rag.embedder import embed_and_store_chunks
-        chunks = chunk_document(new_path, str(new_doc.id), new_doc.title)
-        await embed_and_store_chunks(chunks, str(new_doc.id), db)
+        chunks = chunk_document(new_path, new_doc.id, new_doc.title)
+        await embed_and_store_chunks(chunks, new_doc.id, new_doc.title, True)
         chunk_count = len(chunks)
         status = "re-indexed"
     except Exception as e:
@@ -194,7 +211,7 @@ async def replace_document(
         status = f"upload_ok_indexing_failed: {str(e)[:100]}"
 
     return {
-        "new_document_id": str(new_doc.id),
+        "new_document_id": new_doc.id,
         "supersedes": doc_id,
         "chunk_count": chunk_count,
         "status": status,
@@ -206,14 +223,32 @@ async def replace_document(
 @router.delete("/documents/{doc_id}")
 async def delete_document(
     doc_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Soft-delete: mark document as inactive (removed from active retrieval)."""
-    doc = db.query(KnowledgeDocument).filter_by(id=doc_id, is_active=True).first()
-    if not doc:
+    doc_dict = await db.knowledge_documents.find_one({"id": doc_id, "is_active": True})
+    if not doc_dict:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    doc.is_active = False
-    db.commit()
+    await db.knowledge_documents.update_one(
+        {"id": doc_id},
+        {"$set": {"is_active": False}}
+    )
+    
+    try:
+        from models.qdrant_client import get_async_qdrant
+        from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+        qdrant = get_async_qdrant()
+        
+        await qdrant.set_payload(
+            collection_name=settings.qdrant_collection_name,
+            payload={"is_active": False},
+            points=Filter(
+                must=[FieldCondition(key="document_id", match=MatchValue(value=doc_id))]
+            )
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to soft delete old Qdrant chunks: {e}")
 
-    return {"message": f"Document '{doc.title}' removed from active retrieval (archived, not deleted)."}
+    return {"message": f"Document '{doc_dict.get('title')}' removed from active retrieval (archived, not deleted)."}

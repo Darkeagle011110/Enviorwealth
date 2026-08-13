@@ -1,52 +1,61 @@
 import json
-import redis.asyncio as redis
 from typing import Optional, Dict, Any
-from config.settings import settings
+from datetime import datetime, timezone, timedelta
+from models.mongodb import get_database
 
 class SessionManager:
     """
-    Redis-backed session manager for ephemeral conversation state.
-    TTL is 24 hours (86400 seconds).
+    MongoDB-backed session manager for ephemeral conversation state.
+    Replaces Redis. TTL is handled by MongoDB TTL indexes (24 hours).
     """
     def __init__(self):
-        self.redis_client = redis.from_url(
-            settings.redis_url,
-            decode_responses=True
-        )
         self.ttl_seconds = 86400
 
+    def _now(self):
+        return datetime.now(timezone.utc)
+
     async def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
-        data = await self.redis_client.get(f"session:{session_id}")
-        if data:
-            return json.loads(data)
+        db = get_database()
+        doc = await db.sessions.find_one({"_id": session_id})
+        if doc:
+            return doc.get("state")
         return None
 
     async def save_session(self, session_id: str, state: Dict[str, Any]):
-        await self.redis_client.setex(
-            f"session:{session_id}",
-            self.ttl_seconds,
-            json.dumps(state)
-        )
+        db = get_database()
+        expires_at = self._now() + timedelta(seconds=self.ttl_seconds)
+        doc = {
+            "_id": session_id,
+            "state": state,
+            "expires_at": expires_at
+        }
+        await db.sessions.replace_one({"_id": session_id}, doc, upsert=True)
 
     async def clear_session(self, session_id: str):
-        await self.redis_client.delete(f"session:{session_id}")
+        db = get_database()
+        await db.sessions.delete_one({"_id": session_id})
         
     async def check_rate_limit(self, user_ip: str) -> bool:
         """
-        Simple token bucket rate limit: Max 50 messages per hour per IP.
-        Returns True if allowed, False if limited.
+        Simple rate limit: Max 50 messages per hour per IP.
+        Uses atomic $inc and MongoDB TTL index on rate_limits collection.
         """
-        key = f"ratelimit:{user_ip}"
-        current = await self.redis_client.get(key)
+        db = get_database()
+        expires_at = self._now() + timedelta(hours=1)
         
-        if current and int(current) >= 50:
+        doc = await db.rate_limits.find_one_and_update(
+            {"_id": user_ip},
+            {
+                "$inc": {"count": 1},
+                "$setOnInsert": {"expires_at": expires_at}
+            },
+            upsert=True,
+            return_document=True
+        )
+        
+        if doc and doc.get("count", 0) > 50:
             return False
             
-        pipe = self.redis_client.pipeline()
-        pipe.incr(key)
-        pipe.expire(key, 3600) # 1 hour
-        await pipe.execute()
-        
         return True
 
 session_manager = SessionManager()

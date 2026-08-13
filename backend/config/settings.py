@@ -34,26 +34,16 @@ class Settings(BaseSettings):
             return json.loads(v)
         return v
 
-    # ── Database ─────────────────────────────────────────────────────────────
-    database_url: str = "postgresql+psycopg2://carbon:carbonpass@localhost:5432/carbondb"
-    
-    @field_validator("database_url", mode="before")
-    @classmethod
-    def parse_db_url(cls, v):
-        if isinstance(v, str) and v.startswith("postgres://"):
-            return v.replace("postgres://", "postgresql+psycopg2://", 1)
-        return v
+    # ── MongoDB ───────────────────────────────────────────────────────────────
+    mongodb_url: str = "mongodb://localhost:27017"
+    mongodb_db_name: str = "envirowealth"
 
-    # Async URL for async SQLAlchemy usage
-    @property
-    def async_database_url(self) -> str:
-        url = self.database_url
-        if url.startswith("postgres://"):
-            url = url.replace("postgres://", "postgresql://", 1)
-        return url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
-
-    # ── Redis ─────────────────────────────────────────────────────────────────
-    redis_url: str = "redis://localhost:6379/0"
+    # ── Qdrant (Cloud) ────────────────────────────────────────────────────────
+    qdrant_url: str = "https://your-cluster.qdrant.io"
+    qdrant_api_key: str = ""
+    qdrant_collection_name: str = "knowledge_chunks"
+    # Embedding vector dimension — 1536 for text-embedding-3-small (MVP default)
+    qdrant_vector_size: int = 1536
 
     # ── Admin Auth ────────────────────────────────────────────────────────────
     admin_secret_key: str = "change-me-before-production"
@@ -74,7 +64,7 @@ class Settings(BaseSettings):
 
     # ── Embeddings ────────────────────────────────────────────────────────────
     embedding_provider: str = "openai"
-    embedding_model: str = "text-embedding-3-large"
+    embedding_model: str = "text-embedding-3-small"
     local_embedding_model: str = "all-MiniLM-L6-v2"
 
     # ── Paths ─────────────────────────────────────────────────────────────────

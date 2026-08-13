@@ -1,23 +1,37 @@
-import os
-from sqlalchemy import text
-from models.database import engine
+"""
+Database / infrastructure initialization script.
 
-def init_db():
-    sql_path = os.path.join(os.path.dirname(__file__), "models", "migrations", "init.sql")
-    with open(sql_path, "r", encoding="utf-8") as f:
-        sql = f.read()
-    
-    with engine.connect() as conn:
-        for statement in sql.split(';'):
-            stmt = statement.strip()
-            if stmt:
-                try:
-                    conn.execute(text(stmt))
-                    conn.commit()
-                except Exception as e:
-                    print(f"Skipping statement due to error: {e}")
-                    conn.rollback()
+Replaced the old PostgreSQL init (init.sql + SQLAlchemy engine) with:
+  1. MongoDB index creation (via motor)
+  2. Qdrant collection creation (via qdrant-client)
+
+Run this script manually before first startup, or let the app lifespan
+handler in main.py call it automatically.
+
+Usage:
+    cd backend
+    python init_db.py
+"""
+
+import asyncio
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
+logger = logging.getLogger(__name__)
+
+
+async def init_all():
+    logger.info("Initializing MongoDB indexes...")
+    from models.mongodb import create_indexes
+    await create_indexes()
+    logger.info("MongoDB indexes created.")
+
+    logger.info("Initializing Qdrant collection...")
+    from models.qdrant_client import ensure_collection
+    await ensure_collection()
+    logger.info("Qdrant collection ready.")
+
 
 if __name__ == "__main__":
-    init_db()
-    print("Database initialized successfully!")
+    asyncio.run(init_all())
+    print("Infrastructure initialized successfully!")

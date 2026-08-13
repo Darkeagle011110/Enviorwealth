@@ -1,17 +1,19 @@
 """
-Embedder — generates embeddings and stores them in pgvector.
-Supports OpenAI text-embedding-3-large (primary) with local
+Embedder — generates embeddings and stores them in Qdrant (vectors) and MongoDB (metadata).
+Supports OpenAI text-embedding-3-small (primary) with local
 sentence-transformers fallback.
 """
 
 from __future__ import annotations
 import logging
+import uuid
 from typing import List
-from sqlalchemy.orm import Session
 
 from rag.chunker import DocumentChunk
-from models.orm_models import KnowledgeChunk
 from config.settings import settings
+from models.mongodb import get_database
+from models.qdrant_client import get_async_qdrant
+from qdrant_client.http.models import PointStruct
 
 logger = logging.getLogger(__name__)
 
@@ -44,16 +46,21 @@ async def _get_embeddings(texts: List[str]) -> List[List[float]]:
 async def embed_and_store_chunks(
     chunks: List[DocumentChunk],
     document_id: str,
-    db: Session,
+    title: str = "",
+    is_active: bool = True,
     batch_size: int = 50,
 ) -> int:
     """
-    Embed document chunks and store them in the pgvector table.
+    Embed document chunks and store them in Qdrant (vectors) and MongoDB (text/metadata).
     Returns the number of chunks stored.
     """
     if not chunks:
         return 0
 
+    db = get_database()
+    qdrant = get_async_qdrant()
+    collection_name = settings.qdrant_collection_name
+    
     stored = 0
     for i in range(0, len(chunks), batch_size):
         batch = chunks[i : i + batch_size]
@@ -65,18 +72,51 @@ async def embed_and_store_chunks(
             logger.error(f"Embedding batch {i} failed: {e}")
             raise
 
+        points = []
+        mongo_docs = []
+        
         for chunk, embedding in zip(batch, embeddings):
-            record = KnowledgeChunk(
-                document_id=document_id,
-                chunk_index=chunk.chunk_index,
-                content=chunk.content,
-                doc_summary=chunk.doc_summary,
-                embedding=embedding,
-                metadata_=chunk.metadata,
+            chunk_id = str(uuid.uuid4())
+            
+            # MongoDB doc for reference
+            mongo_docs.append({
+                "id": chunk_id,
+                "document_id": document_id,
+                "chunk_index": chunk.chunk_index,
+                "content": chunk.content,
+                "doc_summary": chunk.doc_summary,
+                "metadata": chunk.metadata
+            })
+            
+            # Qdrant point
+            payload = {
+                "document_id": document_id,
+                "chunk_index": chunk.chunk_index,
+                "content": chunk.content,
+                "doc_summary": chunk.doc_summary,
+                "metadata": chunk.metadata,
+                "document_title": title,
+                "is_active": is_active
+            }
+            
+            points.append(
+                PointStruct(id=chunk_id, vector=embedding, payload=payload)
             )
-            db.merge(record)
-            stored += 1
+            
+        # Store in Qdrant
+        await qdrant.upsert(
+            collection_name=collection_name,
+            points=points
+        )
+        
+        # Store in MongoDB (for reference/admin display)
+        if mongo_docs:
+            from datetime import datetime, timezone
+            for doc in mongo_docs:
+                doc["created_at"] = datetime.now(timezone.utc)
+            await db.knowledge_chunks.insert_many(mongo_docs)
+            
+        stored += len(batch)
 
-    db.commit()
     logger.info(f"Stored {stored} chunks for document {document_id}")
     return stored

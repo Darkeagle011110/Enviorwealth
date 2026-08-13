@@ -11,7 +11,7 @@ The admin panel will surface these as the knowledge gap backlog.
 import logging
 from datetime import datetime, timezone
 from typing import Optional
-from sqlalchemy.orm import Session
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ async def log_unanswerable_question(
     question: str,
     node: str,
     reason: str,
-    db: Optional[Session] = None,
+    db: Optional[AsyncIOMotorDatabase] = None,
 ) -> None:
     """
     Log a question the bot could not answer to the AuditLog table.
@@ -31,7 +31,7 @@ async def log_unanswerable_question(
         question: The user's question that could not be answered.
         node: Which orchestrator node encountered the limitation.
         reason: Why the question couldn't be answered (no context, out of scope, etc.)
-        db: SQLAlchemy session. If None, only logs to the application log.
+        db: Async MongoDB database. If None, only logs to the application log.
     """
     payload = {
         "question": question,
@@ -49,17 +49,15 @@ async def log_unanswerable_question(
     # Persist to DB if available
     if db is not None:
         try:
-            from models.orm_models import AuditLog
-            import uuid
-            entry = AuditLog(
-                event_type="unanswerable_question",
-                session_id=session_id,
-                assessment_id=None,
-                payload=payload,
-                ip_hash=None,
-            )
-            db.add(entry)
-            db.commit()
+            entry = {
+                "event_type": "unanswerable_question",
+                "session_id": session_id,
+                "assessment_id": None,
+                "payload": payload,
+                "ip_hash": None,
+                "created_at": datetime.now(timezone.utc)
+            }
+            await db.audit_logs.insert_one(entry)
             logger.debug(f"Unanswerable question logged to AuditLog for session {session_id}")
         except Exception as e:
             logger.warning(f"Failed to write unanswerable question to AuditLog: {e}")

@@ -7,10 +7,10 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 import bcrypt
 from pydantic import BaseModel, EmailStr
-from sqlalchemy.orm import Session
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from config.settings import settings
-from models.database import get_db
-from models.orm_models import ClientUser
+from models.mongodb import get_db
+from models.schemas import ClientUserDoc
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def get_current_client_user(token: str = Depends(client_oauth2_scheme), db: Session = Depends(get_db)) -> ClientUser:
+async def get_current_client_user(token: str = Depends(client_oauth2_scheme), db: AsyncIOMotorDatabase = Depends(get_db)) -> ClientUserDoc:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -58,42 +58,41 @@ async def get_current_client_user(token: str = Depends(client_oauth2_scheme), db
     except JWTError:
         raise credentials_exception
         
-    user = db.query(ClientUser).filter(ClientUser.email == email).first()
-    if user is None:
+    user_dict = await db.client_users.find_one({"email": email})
+    if user_dict is None:
         raise credentials_exception
-    return user
+    return ClientUserDoc(**user_dict)
 
 @router.post("/signup", response_model=Token)
-async def signup(user: UserSignup, db: Session = Depends(get_db)):
-    db_user = db.query(ClientUser).filter(ClientUser.email == user.email).first()
+async def signup(user: UserSignup, db: AsyncIOMotorDatabase = Depends(get_db)):
+    db_user = await db.client_users.find_one({"email": user.email})
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
         
     hashed_password = get_password_hash(user.password)
-    new_user = ClientUser(
+    new_user = ClientUserDoc(
         email=user.email,
         password_hash=hashed_password,
         full_name=user.full_name
     )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    await db.client_users.insert_one(new_user.model_dump())
     
     access_token = create_access_token(data={"sub": new_user.email})
     return {"access_token": access_token, "token_type": "bearer", "full_name": new_user.full_name, "email": new_user.email}
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(ClientUser).filter(ClientUser.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.password_hash):
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncIOMotorDatabase = Depends(get_db)):
+    user_dict = await db.client_users.find_one({"email": form_data.username})
+    if not user_dict or not verify_password(form_data.password, user_dict["password_hash"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    user = ClientUserDoc(**user_dict)
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer", "full_name": user.full_name, "email": user.email}
 
 @router.get("/me")
-async def read_users_me(current_user: ClientUser = Depends(get_current_client_user)):
-    return {"id": str(current_user.id), "email": current_user.email, "full_name": current_user.full_name}
+async def read_users_me(current_user: ClientUserDoc = Depends(get_current_client_user)):
+    return {"id": current_user.id, "email": current_user.email, "full_name": current_user.full_name}

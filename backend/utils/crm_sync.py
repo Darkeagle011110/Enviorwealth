@@ -1,40 +1,50 @@
 import logging
-import uuid
-from sqlalchemy.orm import Session
-from models.database import SessionLocal
-from models.orm_models import AssessmentSession, Assessment, Lead
-from engine.schemas import VerdictCategory
+from typing import Optional
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from models.mongodb import get_database
 
 logger = logging.getLogger(__name__)
 
-def sync_state_to_crm(session_id: str, state_dict: dict, user_id=None, user_name="Anonymous User"):
+async def sync_state_to_crm(session_id: str, state_dict: dict, user_id=None, user_name="Anonymous User"):
     """
-    Syncs the current conversation state into the Postgres CRM tables.
+    Syncs the current conversation state into the MongoDB tables.
     """
-    db = SessionLocal()
     try:
-        # 1. Update or Create AssessmentSession
-        db_session = db.query(AssessmentSession).filter(AssessmentSession.session_token == session_id).first()
-        if not db_session:
-            db_session = AssessmentSession(session_token=session_id, user_id=user_id)
-            db.add(db_session)
+        db = get_database()
         
-        db_session.intake_data = state_dict.get("intake_data", {})
-        db_session.tier = 1
-        db.commit()
-        db.refresh(db_session)
+        # 1. Update or Create AssessmentSession
+        db_session = await db.assessment_sessions.find_one({"session_token": session_id})
+        if not db_session:
+            from datetime import datetime, timezone
+            new_session = {
+                "session_token": session_id,
+                "user_id": user_id,
+                "tier": 1,
+                "intake_data": state_dict.get("intake_data", {}),
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
+            }
+            res = await db.assessment_sessions.insert_one(new_session)
+            session_doc_id = str(res.inserted_id)
+        else:
+            session_doc_id = str(db_session.get("_id") or db_session.get("id"))
+            from datetime import datetime, timezone
+            await db.assessment_sessions.update_one(
+                {"session_token": session_id},
+                {"$set": {
+                    "intake_data": state_dict.get("intake_data", {}),
+                    "tier": 1,
+                    "updated_at": datetime.now(timezone.utc)
+                }}
+            )
         
         # 2. If verdict exists, save Assessment
         verdict = state_dict.get("verdict")
-        db_assessment = None
+        assessment_doc_id = None
         if verdict:
-            # check if it already exists
-            db_assessment = db.query(Assessment).filter(Assessment.session_id == db_session.id).first()
-            if not db_assessment:
-                db_assessment = Assessment(session_id=db_session.id)
-                db.add(db_assessment)
+            db_assessment = await db.assessments.find_one({"session_id": session_doc_id})
             
-            # verdict could be a dict if it was sanitized, or a Pydantic model
+            # Extract fields
             if isinstance(verdict, dict):
                 v_cat = verdict.get("verdict")
                 confidence = verdict.get("confidence")
@@ -48,34 +58,61 @@ def sync_state_to_crm(session_id: str, state_dict: dict, user_id=None, user_name
                 knockout_gate = getattr(verdict, "knockout_gate", None)
                 flags = getattr(verdict, "flags", [])
                 
-            db_assessment.verdict = v_cat or "UNKNOWN"
-            db_assessment.confidence = confidence
-            db_assessment.knockout_gate = knockout_gate
-            db_assessment.flags = flags
-            db.commit()
-            db.refresh(db_assessment)
+            update_data = {
+                "verdict": v_cat or "UNKNOWN",
+                "confidence": confidence,
+                "knockout_gate": knockout_gate,
+                "flags": flags,
+            }
+            
+            if not db_assessment:
+                from datetime import datetime, timezone
+                update_data["session_id"] = session_doc_id
+                update_data["created_at"] = datetime.now(timezone.utc)
+                res = await db.assessments.insert_one(update_data)
+                assessment_doc_id = str(res.inserted_id)
+            else:
+                assessment_doc_id = str(db_assessment.get("_id") or db_assessment.get("id"))
+                await db.assessments.update_one(
+                    {"session_id": session_doc_id},
+                    {"$set": update_data}
+                )
         
         # 3. If lead_score exists, save Lead
         lead_score = state_dict.get("lead_score")
-        if lead_score and db_assessment:
-            db_lead = db.query(Lead).filter(Lead.session_id == db_session.id).first()
+        if lead_score and assessment_doc_id:
+            db_lead = await db.leads.find_one({"session_id": session_doc_id})
+            
+            intake = state_dict.get("intake_data", {})
+            lead_update = {
+                "lead_score": lead_score,
+            }
+            
             if not db_lead:
-                db_lead = Lead(session_id=db_session.id, assessment_id=db_assessment.id)
-                db.add(db_lead)
-            
-            db_lead.lead_score = lead_score
-            # Extract basic info from intake_data if available
-            intake = db_session.intake_data
-            if not db_lead.state:
-                db_lead.state = intake.get("state", "Unknown")
-            if not db_lead.name:
-                db_lead.name = user_name
-            
-            db_lead.status = db_lead.status or "new"
-            db.commit()
+                from datetime import datetime, timezone
+                lead_update["session_id"] = session_doc_id
+                lead_update["assessment_id"] = assessment_doc_id
+                lead_update["state"] = intake.get("state", "Unknown")
+                lead_update["name"] = user_name
+                lead_update["status"] = "new"
+                lead_update["created_at"] = datetime.now(timezone.utc)
+                lead_update["updated_at"] = datetime.now(timezone.utc)
+                await db.leads.insert_one(lead_update)
+            else:
+                if not db_lead.get("state"):
+                    lead_update["state"] = intake.get("state", "Unknown")
+                if not db_lead.get("name"):
+                    lead_update["name"] = user_name
+                if not db_lead.get("status"):
+                    lead_update["status"] = "new"
+                    
+                from datetime import datetime, timezone
+                lead_update["updated_at"] = datetime.now(timezone.utc)
+                
+                await db.leads.update_one(
+                    {"session_id": session_doc_id},
+                    {"$set": lead_update}
+                )
             
     except Exception as e:
         logger.error(f"Failed to sync state to CRM: {e}")
-        db.rollback()
-    finally:
-        db.close()

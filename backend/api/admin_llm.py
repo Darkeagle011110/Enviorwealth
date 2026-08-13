@@ -5,12 +5,12 @@ Protected by admin secret key.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Header
-from sqlalchemy.orm import Session
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 from typing import Optional, Dict, List
 
 from llm.provider import llm_registry, PROVIDER_MODELS
-from models.database import get_db
+from models.mongodb import get_db
 from config.settings import settings
 
 router = APIRouter()
@@ -49,7 +49,7 @@ class SwitchLLMRequest(BaseModel):
 
 
 @router.post("/llm/switch")
-async def switch_llm(req: SwitchLLMRequest, db: Session = Depends(get_db)):
+async def switch_llm(req: SwitchLLMRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
     """
     Switch the active (or fallback) LLM provider.
     Runs a health check BEFORE switching.

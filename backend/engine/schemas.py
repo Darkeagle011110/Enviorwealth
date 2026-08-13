@@ -60,6 +60,8 @@ class Tier1Intake(BaseModel):
     All fields optional to support progressive collection (gate evaluation
     returns insufficient_info if a required field is missing).
     """
+    model_config = {"extra": "allow"}
+
     area_ha: Optional[float] = Field(None, ge=0, description="Total land area in hectares")
     tenure_type: Optional[TenureType] = None
     land_legal_class: Optional[LandLegalClass] = None

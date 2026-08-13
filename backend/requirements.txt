@@ -10,11 +10,9 @@ python-multipart==0.0.9       # file uploads
 aiofiles==23.2.1              # async static file serving
 
 # ─── Database ────────────────────────────────────────────────────────────────
-sqlalchemy==2.0.35
-psycopg2-binary>=2.9.9
-pgvector==0.3.5
-alembic==1.13.2
-redis==5.0.8
+motor>=3.6.0                  # async MongoDB driver (built on PyMongo)
+pymongo>=4.9.0                # sync MongoDB driver (motor dependency + direct use)
+qdrant-client>=1.12.0         # Qdrant vector DB client (Cloud + self-hosted)
 
 # ─── Validation ──────────────────────────────────────────────────────────────
 pydantic[email]==2.8.2

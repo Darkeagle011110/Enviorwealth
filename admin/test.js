@@ -104,12 +104,11 @@ function navigate(page) {
 
   const navMap = { 
     dashboard: 0, 
-    leads: 1, 
-    llm: 2, 
-    docs: 3, 
-    geo: 4, 
-    channels: 5, 
-    health: 6 
+    llm: 1, 
+    docs: 2, 
+    geo: 3, 
+    channels: 4, 
+    health: 5 
   };
   if (navMap[page] !== undefined) {
     document.querySelectorAll('.nav-item')[navMap[page]].classList.add('active');
@@ -455,7 +454,6 @@ function initAdmin() {
     loadDocs();
   } else if (document.getElementById('page-dashboard').classList.contains('active')) {
     loadDashboard();
-  } else if (document.getElementById('page-leads').classList.contains('active')) {
     fetchLeads();
   }
 }

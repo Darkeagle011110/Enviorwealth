@@ -4,7 +4,7 @@ The LLM is NOT involved in the verdict — it only generates the explanation tex
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 from typing import Optional
 import secrets
@@ -12,7 +12,8 @@ import secrets
 from engine.schemas import Tier1Intake, Verdict
 from engine.run_gates import run_gates
 from llm.provider import llm_registry
-from models.database import get_db
+from models.mongodb import get_db
+from models.form_config import FormSchema, EvaluationConfig
 
 router = APIRouter()
 
@@ -45,14 +46,28 @@ class AssessResponse(BaseModel):
     llm_model_used: Optional[str] = None
 
 
+@router.get("/eligibility-form", response_model=FormSchema)
+async def get_eligibility_form(db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Fetch the dynamic eligibility form schema."""
+    doc = await db.form_schemas.find_one({"schema_id": "default"})
+    if not doc:
+        return FormSchema()
+    return FormSchema(**doc)
+
+
+
 @router.post("/assess", response_model=AssessResponse)
-async def assess(req: AssessRequest, db: Session = Depends(get_db)):
+async def assess(req: AssessRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
     """
     Run the 10 eligibility gates and return a structured verdict.
     The verdict is always set by the rules engine — never by the LLM.
     """
+    # Fetch dynamic rules
+    config_doc = await db.evaluation_configs.find_one({"config_id": "default"})
+    rules = EvaluationConfig(**config_doc).rules if config_doc else []
+
     # Run deterministic rules engine
-    verdict, gate_results = run_gates(req.intake)
+    verdict, gate_results = run_gates(req.intake, rules)
 
     session_token = req.session_token or secrets.token_urlsafe(32)
 

@@ -2,45 +2,32 @@ version: "3.9"
 
 services:
   # ──────────────────────────────────────────────────────────────────
-  # PostgreSQL 16 with pgvector + PostGIS extensions
-  # Serves: relational data, vector embeddings (RAG), geospatial data
+  # MongoDB 7 — primary data store for all application data:
+  # users, assessment sessions, gate results, assessments, leads,
+  # audit logs, LLM configs, knowledge documents, and chat sessions.
   # ──────────────────────────────────────────────────────────────────
-  db:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.db
-    container_name: carbon_db
+  mongodb:
+    image: mongo:7
+    container_name: envirowealth_mongo
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-carbon}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-carbonpass}
-      POSTGRES_DB: ${POSTGRES_DB:-carbondb}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-envirowealth}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-envirowealth_pass}
+      MONGO_INITDB_DATABASE: ${MONGODB_DB_NAME:-envirowealth}
     ports:
-      - "5433:5432"
+      - "27017:27017"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./backend/models/migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mongodata:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-carbon} -d ${POSTGRES_DB:-carbondb}"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   # ──────────────────────────────────────────────────────────────────
-  # Redis 7 — ephemeral session/conversation state, rate limiting
+  # NOTE: Qdrant is hosted on Qdrant Cloud — no local container needed.
+  # Configure QDRANT_URL and QDRANT_API_KEY in your .env file.
   # ──────────────────────────────────────────────────────────────────
-  redis:
-    image: redis:7-alpine
-    container_name: carbon_redis
-    restart: unless-stopped
-    ports:
-      - "6380:6379"
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 volumes:
-  pgdata:
+  mongodata:

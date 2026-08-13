@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from typing import Optional
-from sqlalchemy.orm import Session
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from .adapters.base_adapter import BaseLLMAdapter, LLMResponse
 from .adapters.claude_adapter import ClaudeAdapter
@@ -111,34 +111,33 @@ class LLMProviderRegistry:
             self._primary_meta = {"provider": provider, "model_name": model}
             logger.info(f"LLM initialized from env: {provider}/{model}")
 
-    async def initialize_from_db(self, db: Session):
+    async def initialize_from_db(self, db: AsyncIOMotorDatabase):
         """
         Load active + fallback configs from DB (called after DB is ready).
         Overrides the env-based bootstrap.
         """
-        from models.orm_models import LLMProviderConfig
         # C3 FIX: Use Fernet encryption (not base64) for API key storage/retrieval
         from models.encryption import decrypt_data
 
-        active = db.query(LLMProviderConfig).filter_by(is_active=True).first()
-        fallback = db.query(LLMProviderConfig).filter_by(is_fallback=True).first()
+        active = await db.llm_provider_configs.find_one({"is_active": True})
+        fallback = await db.llm_provider_configs.find_one({"is_fallback": True})
 
         async with self._lock:
             if active:
-                api_key = decrypt_data(active.api_key_enc)
+                api_key = decrypt_data(active.get("api_key_enc", ""))
                 self._primary = self._build_adapter(
-                    active.provider, active.model_name, api_key, active.extra_params or {}
+                    active.get("provider"), active.get("model_name"), api_key, active.get("extra_params", {})
                 )
-                self._primary_meta = {"provider": active.provider, "model_name": active.model_name}
-                logger.info(f"Active LLM loaded from DB: {active.provider}/{active.model_name}")
+                self._primary_meta = {"provider": active.get("provider"), "model_name": active.get("model_name")}
+                logger.info(f"Active LLM loaded from DB: {active.get('provider')}/{active.get('model_name')}")
 
             if fallback:
-                api_key = decrypt_data(fallback.api_key_enc)
+                api_key = decrypt_data(fallback.get("api_key_enc", ""))
                 self._fallback = self._build_adapter(
-                    fallback.provider, fallback.model_name, api_key, fallback.extra_params or {}
+                    fallback.get("provider"), fallback.get("model_name"), api_key, fallback.get("extra_params", {})
                 )
-                self._fallback_meta = {"provider": fallback.provider, "model_name": fallback.model_name}
-                logger.info(f"Fallback LLM loaded from DB: {fallback.provider}/{fallback.model_name}")
+                self._fallback_meta = {"provider": fallback.get("provider"), "model_name": fallback.get("model_name")}
+                logger.info(f"Fallback LLM loaded from DB: {fallback.get('provider')}/{fallback.get('model_name')}")
 
     async def switch_provider(
         self,
@@ -147,7 +146,7 @@ class LLMProviderRegistry:
         api_key: str,
         extra_params: dict = None,
         is_fallback: bool = False,
-        db: Session = None,
+        db: AsyncIOMotorDatabase = None,
     ) -> dict:
         """
         Switch the active (or fallback) LLM provider at runtime.
@@ -177,19 +176,19 @@ class LLMProviderRegistry:
 
         return health
 
-    async def _persist_to_db(self, db, provider, model_name, api_key, extra_params, is_fallback, health):
-        from models.orm_models import LLMProviderConfig
+    async def _persist_to_db(self, db: AsyncIOMotorDatabase, provider, model_name, api_key, extra_params, is_fallback, health):
         from datetime import datetime, timezone
+        from models.schemas import LLMProviderConfigDoc
         # C3 FIX: Use Fernet symmetric encryption instead of base64
         from models.encryption import encrypt_data
 
         # Deactivate existing config of same type
         if is_fallback:
-            db.query(LLMProviderConfig).filter_by(is_fallback=True).update({"is_fallback": False})
+            await db.llm_provider_configs.update_many({"is_fallback": True}, {"$set": {"is_fallback": False}})
         else:
-            db.query(LLMProviderConfig).filter_by(is_active=True).update({"is_active": False})
+            await db.llm_provider_configs.update_many({"is_active": True}, {"$set": {"is_active": False}})
 
-        new_cfg = LLMProviderConfig(
+        new_cfg = LLMProviderConfigDoc(
             provider=provider,
             model_name=model_name,
             api_key_enc=encrypt_data(api_key),
@@ -200,8 +199,7 @@ class LLMProviderRegistry:
             last_test_ok=health["status"] == "ok",
             last_test_ms=health.get("latency_ms"),
         )
-        db.add(new_cfg)
-        db.commit()
+        await db.llm_provider_configs.insert_one(new_cfg.model_dump())
 
     async def get_active_llm(self) -> BaseLLMAdapter:
         """

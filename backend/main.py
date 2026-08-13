@@ -7,12 +7,13 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from config.settings import settings
-from models.database import SessionLocal
+from models.mongodb import get_database, close_client
+from models.qdrant_client import close_qdrant
 from llm.provider import llm_registry
 
 # ── Routers ───────────────────────────────────────────────────────────────────
@@ -25,11 +26,11 @@ from api.leads import router as leads_router
 from api.admin_geospatial import router as admin_geo_router
 from api.admin_channels import router as admin_channels_router
 from api.admin_dashboard import router as admin_dashboard_router
+from api.admin_form import router as admin_form_router
 from api.whatsapp import router as whatsapp_router
 from api.auth import router as auth_router, get_current_admin_user
 from api.user import router as user_router
 from api.client_auth import router as client_auth_router
-from fastapi import Depends
 
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
@@ -43,11 +44,17 @@ async def lifespan(app: FastAPI):
     # ── Startup ──────────────────────────────────────────────────────────────
     logger.info("Starting Carbon Market Eligibility Chatbot API...")
 
+    # Initialize MongoDB indexes + Qdrant collections
+    try:
+        from init_db import init_all
+        await init_all()
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+
     # 1. Try to load LLM config from DB (has precedence over env vars)
     try:
-        db = SessionLocal()
+        db = get_database()
         await llm_registry.initialize_from_db(db)
-        db.close()
     except Exception as e:
         logger.warning(f"DB LLM config load failed ({e}) — falling back to env vars")
         await llm_registry.initialize_from_env()
@@ -58,6 +65,8 @@ async def lifespan(app: FastAPI):
 
     # ── Shutdown ─────────────────────────────────────────────────────────────
     logger.info("Shutting down...")
+    await close_client()
+    await close_qdrant()
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
@@ -98,6 +107,7 @@ app.include_router(admin_llm_router,   prefix="/api/admin", tags=["Admin – LLM
 app.include_router(admin_docs_router,  prefix="/api/admin", tags=["Admin – Documents"], dependencies=admin_dependencies)
 app.include_router(admin_corpus_router, prefix="/api/admin", tags=["Admin – Corpus Seed"], dependencies=admin_dependencies)
 app.include_router(admin_geo_router,   prefix="/api/admin", tags=["Admin – Geospatial"], dependencies=admin_dependencies)
+app.include_router(admin_form_router,  prefix="/api/admin/form", tags=["Admin – Form Builder"], dependencies=admin_dependencies)
 app.include_router(admin_channels_router, prefix="/api/admin/channels", tags=["Admin – Channels"], dependencies=admin_dependencies)
 
 # ── Admin Panel Static Files ──────────────────────────────────────────────────
