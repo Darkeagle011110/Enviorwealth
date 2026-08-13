@@ -6,6 +6,7 @@
   <title>EnviroWealth — Admin Panel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="form-builder.css">
   <style>
     /* ── CSS Reset & Design Tokens ────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1546,22 +1547,40 @@
       </div>
       <div class="page-subtitle">Configure the dynamic eligibility form fields and evaluation rules.</div>
     </div>
-    <button class="btn btn-primary" onclick="saveFormConfig()">💾 Save Configuration</button>
+    <button class="btn btn-primary" onclick="fbSaveToServer()">💾 Save Configuration</button>
   </div>
   
-  <div class="grid-2">
-    <!-- Form Schema Section -->
+  <div id="fb-stepper" class="fb-stepper"></div>
+
+  <!-- Visual Builder View -->
+  <div id="fb-visual-view" class="fb-container">
+    <div class="fb-sidebar-left">
+      <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Add Fields</div>
+      <div style="font-size: 11px; color: #777; margin-bottom: 16px;">Click fields to build your form</div>
+      <div id="fb-palette"></div>
+    </div>
+    
+    <div class="fb-canvas" id="fb-canvas-content">
+      <!-- Canvas dynamically rendered by JS -->
+    </div>
+    
+    <div class="fb-sidebar-right" id="fb-settings">
+      <!-- Settings dynamically rendered by JS -->
+    </div>
+  </div>
+
+  <!-- Raw JSON Fallback / Rules Editor View -->
+  <div id="fb-json-view" class="grid-2" style="display: none;">
     <div class="card" style="display: flex; flex-direction: column;">
       <div class="card-title">Form Schema JSON</div>
-      <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">Define the multi-step form structure (steps and fields).</p>
-      <textarea id="json-form-schema" style="width: 100%; height: 400px; padding: 12px; font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); border-radius: var(--radius-sm); resize: vertical;" spellcheck="false"></textarea>
+      <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">Directly edit the raw form schema JSON.</p>
+      <textarea id="json-form-schema" style="width: 100%; height: 600px; padding: 12px; font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); border-radius: var(--radius-sm); resize: vertical;" spellcheck="false"></textarea>
     </div>
 
-    <!-- Evaluation Rules Section -->
     <div class="card" style="display: flex; flex-direction: column;">
       <div class="card-title">Evaluation Rules JSON</div>
       <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">Define the rules that flag or fail assessments based on field values.</p>
-      <textarea id="json-eval-rules" style="width: 100%; height: 400px; padding: 12px; font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); border-radius: var(--radius-sm); resize: vertical;" spellcheck="false"></textarea>
+      <textarea id="json-eval-rules" style="width: 100%; height: 600px; padding: 12px; font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); border-radius: var(--radius-sm); resize: vertical;" spellcheck="false"></textarea>
     </div>
   </div>
 </div>
@@ -2446,5 +2465,6 @@ if (!ADMIN_TOKEN) {
       }
     }
   </script>
+  <script src="form-builder.js"></script>
 </body>
 </html>
