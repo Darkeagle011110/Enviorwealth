@@ -532,6 +532,43 @@ function fbPreviewForm() {
   }
 }
 
+function fbLoadDefaultForm() {
+  if (!confirm("This will overwrite your current form schema and rules. Proceed?")) return;
+  
+  fbState.schema = {
+    schema_id: "default",
+    version: 1,
+    steps: [
+      {
+        step_id: "s1",
+        title: "Carbon Eligibility Screening",
+        description: "Please provide the following details about your land.",
+        fields: [
+          { field_id: "area_ha", label: "What is the total area of your land? (in hectares)", type: "number", required: true, options: null },
+          { field_id: "tenure_type", label: "What is the ownership/tenure type of the land?", type: "dropdown", required: true, options: ["Owned", "Leased", "Community", "Government", "Disputed"] },
+          { field_id: "land_legal_class", label: "What is the legal classification of the land?", type: "dropdown", required: true, options: ["Revenue - Agricultural", "Revenue - Fallow", "Recorded Forest", "Community", "Coastal", "Urban"] },
+          { field_id: "existing_tree_cover_pct", label: "What percentage of the land currently has tree cover?", type: "number", required: true, placeholder: "0 - 100", options: null },
+          { field_id: "planting_status", label: "What is the current planting status?", type: "dropdown", required: true, options: ["Not started", "Planned this year", "Planted < 2 years ago", "Planted 2-5 years ago", "Planted > 5 years ago"] },
+          { field_id: "would_plant_anyway", label: "Would you have planted trees here even without carbon credits?", type: "yes_no", required: true, options: null }
+        ]
+      }
+    ]
+  };
+
+  fbState.rules = [
+    { rule_id: "r1", target_field: "tenure_type", operator: "in", target_value: ["Disputed", "Government"], action: "fail_structural", reason: "Disputed or government land is ineligible.", flags: ["gate_5"] },
+    { rule_id: "r2", target_field: "land_legal_class", operator: "eq", target_value: "Recorded Forest", action: "fail_structural", reason: "Recorded forest land requires specific government pathways.", flags: ["forest_dept_redirect"] },
+    { rule_id: "r3", target_field: "existing_tree_cover_pct", operator: "gt", target_value: 20, action: "flag", reason: "High existing tree cover may face additionality or forest-status issues.", flags: ["gate_1"] },
+    { rule_id: "r4", target_field: "planting_status", operator: "eq", target_value: "Planted > 5 years ago", action: "fail_structural", reason: "Trees planted over 5 years ago are generally ineligible for new registration.", flags: ["gate_3"] },
+    { rule_id: "r5", target_field: "would_plant_anyway", operator: "eq", target_value: "Yes", action: "flag", reason: "Potential additionality concern.", flags: ["gate_4"] }
+  ];
+
+  fbUpdateJsonView();
+  fbRenderCanvas();
+  fbRenderTabs();
+  toast('✅ Default eligibility form loaded', 'ok');
+}
+
 // Intercept
 async function fbSaveToServer() {
   try {
