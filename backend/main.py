@@ -3,6 +3,7 @@ Carbon Market Eligibility Chatbot — FastAPI Backend
 Phase 1: Rules Engine + RAG Foundation + Admin Panel
 """
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -39,19 +40,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # ── Startup ──────────────────────────────────────────────────────────────
-    logger.info("Starting Carbon Market Eligibility Chatbot API...")
-
-    # Initialize MongoDB indexes + Qdrant collections
+async def _background_init():
+    """Run DB init and LLM config load in the background after the server
+    has already bound its port. This prevents Render port-scan timeouts."""
+    # ── MongoDB indexes + Qdrant collections ──────────────────────────────
     try:
         from init_db import init_all
         await init_all()
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
 
-    # 1. Try to load LLM config from DB (has precedence over env vars)
+    # ── LLM config: DB first, env-var fallback ────────────────────────────
     try:
         db = get_database()
         await llm_registry.initialize_from_db(db)
@@ -60,11 +59,28 @@ async def lifespan(app: FastAPI):
         await llm_registry.initialize_from_env()
 
     logger.info(f"LLM status: {llm_registry.get_status()}")
-    logger.info("API ready.")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ── Startup ──────────────────────────────────────────────────────────────
+    logger.info("Starting Carbon Market Eligibility Chatbot API...")
+
+    # Yield immediately so Uvicorn binds the port right away.
+    # DB init + LLM config run in the background — this prevents Render's
+    # port-scan from timing out while we wait for MongoDB connections.
+    task = asyncio.create_task(_background_init())
+
+    logger.info("API ready (background DB init in progress).")
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────────────
     logger.info("Shutting down...")
+    task.cancel()
+    try:
+        await task
+    except (asyncio.CancelledError, Exception):
+        pass
     await close_client()
     await close_qdrant()
 

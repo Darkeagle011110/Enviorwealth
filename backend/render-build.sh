@@ -4,6 +4,3 @@ set -o errexit
 
 # Install python dependencies
 pip install -r requirements.txt
-
-# Run database initialization
-python init_db.py
