@@ -8,6 +8,20 @@ class FieldType(str, Enum):
     number = "number"
     select = "select"
     boolean = "boolean"
+    short_answer = "short_answer"
+    paragraph = "paragraph"
+    dropdown = "dropdown"
+    multiple_choice = "multiple_choice"
+    checkbox = "checkbox"
+    date = "date"
+    email = "email"
+    phone = "phone"
+    file_upload = "file_upload"
+    section_header = "section_header"
+    divider = "divider"
+    yes_no = "yes_no"
+    rating = "rating"
+    signature = "signature"
 
 class FormField(BaseModel):
     field_id: str
