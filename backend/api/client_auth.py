@@ -19,6 +19,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.jwt_expire_minutes * 24
 
 client_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+client_oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login", auto_error=False)
 router = APIRouter()
 
 class Token(BaseModel):
@@ -61,6 +62,23 @@ async def get_current_client_user(token: str = Depends(client_oauth2_scheme), db
     user_dict = await db.client_users.find_one({"email": email})
     if user_dict is None:
         raise credentials_exception
+    return ClientUserDoc(**user_dict)
+
+
+async def get_optional_client_user(token: Optional[str] = Depends(client_oauth2_scheme_optional), db: AsyncIOMotorDatabase = Depends(get_db)) -> Optional[ClientUserDoc]:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if not email:
+            return None
+    except JWTError:
+        return None
+        
+    user_dict = await db.client_users.find_one({"email": email})
+    if not user_dict:
+        return None
     return ClientUserDoc(**user_dict)
 
 @router.post("/signup", response_model=Token)

@@ -16,7 +16,7 @@ from orchestrator.graph import orchestrator_app
 from session.manager import session_manager
 from utils.crm_sync import sync_state_to_crm
 from memo.template_engine import MemoTemplateEngine
-from api.client_auth import get_current_client_user
+from api.client_auth import get_optional_client_user
 from models.schemas import ClientUserDoc
 from models.mongodb import get_db
 import asyncio
@@ -63,7 +63,7 @@ def _sanitize_state_for_session(state: dict) -> dict:
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest, req: Request, current_user: ClientUserDoc = Depends(get_current_client_user)):
+async def chat_endpoint(request: ChatRequest, req: Request, current_user: Optional[ClientUserDoc] = Depends(get_optional_client_user)):
     user_ip = req.client.host if req.client else "unknown"
 
     if not await session_manager.check_rate_limit(user_ip):
@@ -123,7 +123,10 @@ async def chat_endpoint(request: ChatRequest, req: Request, current_user: Client
     try:
         safe_state = _sanitize_state_for_session(dict(final_state))
         await session_manager.save_session(session_id, safe_state)
-        asyncio.create_task(sync_state_to_crm(session_id, safe_state, current_user.id, current_user.full_name))
+        
+        user_id = str(current_user.id) if current_user else "anonymous"
+        user_name = current_user.full_name if current_user else "Anonymous"
+        asyncio.create_task(sync_state_to_crm(session_id, safe_state, user_id, user_name))
     except Exception as e:
         logger.warning(f"Session save failed for {session_id}: {e}")
 
