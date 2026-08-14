@@ -178,3 +178,87 @@ async def get_user_sessions(current_user: ClientUserDoc = Depends(get_current_cl
             preview=preview
         ))
     return result
+
+
+class SessionDetailResponse(BaseModel):
+    session_id: str
+    messages: List[Dict[str, Any]]
+    intake_data: Dict[str, Any]
+    verdict: Optional[Dict[str, Any]] = None
+
+
+@router.get("/sessions/{session_id}", response_model=SessionDetailResponse)
+async def get_session_detail(
+    session_id: str,
+    current_user: ClientUserDoc = Depends(get_current_client_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    Fetch the full message history and state for a past session.
+    Used by the frontend Sidebar to restore chat messages when a user
+    clicks on a previous assessment in the history list.
+    """
+    # Verify the session belongs to this user
+    db_session = await db.assessment_sessions.find_one({
+        "session_token": session_id,
+        "user_id": current_user.id,
+    })
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Load conversation state from the sessions collection (ephemeral, 24hr TTL)
+    state = await session_manager.get_session(session_id)
+
+    messages: List[Dict[str, Any]] = []
+    intake_data: Dict[str, Any] = {}
+    verdict = None
+
+    if state:
+        raw_messages = state.get("messages", [])
+        # Filter out internal JSON payloads (eligibility_form submissions)
+        for msg in raw_messages:
+            content = msg.get("content", "")
+            if msg.get("role") == "user" and '"eligibility_form"' in content:
+                # Replace raw JSON with a user-friendly placeholder
+                messages.append({
+                    "role": "user",
+                    "content": "📋 Submitted Eligibility Assessment Form",
+                    "timestamp": msg.get("timestamp"),
+                })
+            else:
+                messages.append(msg)
+        intake_data = state.get("intake_data", {})
+        raw_verdict = state.get("verdict")
+        if raw_verdict:
+            if hasattr(raw_verdict, "model_dump"):
+                verdict = raw_verdict.model_dump(mode="json")
+            elif isinstance(raw_verdict, dict):
+                verdict = raw_verdict
+    else:
+        # Session TTL has expired — load what we can from permanent storage
+        intake_data = db_session.get("intake_data", {})
+        # Try to get verdict from assessments collection
+        assessment = await db.assessments.find_one({"session_id": str(db_session.get("_id"))})
+        if assessment:
+            verdict = {
+                "verdict": assessment.get("verdict"),
+                "confidence": assessment.get("confidence"),
+                "flags": assessment.get("flags", []),
+            }
+        # Notify user that message history has expired
+        messages = [{
+            "role": "assistant",
+            "content": (
+                "📂 This is a past assessment. The detailed conversation history has expired "
+                "(sessions are kept for 24 hours), but your eligibility result is shown above. "
+                "Start a new assessment to chat again."
+            ),
+        }]
+
+    return SessionDetailResponse(
+        session_id=session_id,
+        messages=messages,
+        intake_data=intake_data,
+        verdict=verdict,
+    )
+

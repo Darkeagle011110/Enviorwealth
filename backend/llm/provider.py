@@ -171,7 +171,7 @@ class LLMProviderRegistry:
                 logger.info(f"Active LLM switched to {provider}/{model_name}")
 
         # Persist to DB
-        if db:
+        if db is not None:
             await self._persist_to_db(db, provider, model_name, api_key, extra_params, is_fallback, health)
 
         return health

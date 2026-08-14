@@ -27,10 +27,12 @@ _client: AsyncIOMotorClient | None = None
 _db: AsyncIOMotorDatabase | None = None
 
 
+import certifi
+
 def get_client() -> AsyncIOMotorClient:
     global _client
     if _client is None:
-        _client = AsyncIOMotorClient(settings.mongodb_url)
+        _client = AsyncIOMotorClient(settings.mongodb_url, tls=True, tlsCAFile=certifi.where(), tlsAllowInvalidCertificates=True)
     return _client
 
 

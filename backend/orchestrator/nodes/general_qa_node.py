@@ -101,5 +101,3 @@ async def general_qa_node(state: ConversationState) -> ConversationState:
         })
 
     return state
-
-    return state

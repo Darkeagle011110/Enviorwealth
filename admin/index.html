@@ -426,7 +426,7 @@
       overflow: hidden; margin-top: 8px;
     }
     .progress-fill {
-      height: 100%; background: linear-gradient(90deg, var(--accent), #34d399);
+      /* height removed */ background: linear-gradient(90deg, var(--accent), #34d399);
       border-radius: 2px; transition: width 0.4s ease;
     }
   </style>
@@ -1251,7 +1251,7 @@
       </div>
 
       <!-- ASR/TTS Config Card -->
-      <div class="card" style="border-radius: 12px; padding: 24px; height: 100%;">
+      <div class="card" style="border-radius: 12px; padding: 24px; ">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
           <div style="display: flex; align-items: center; gap: 10px;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
@@ -1446,8 +1446,75 @@
       </div>
     </div>
   </div>
+  <!-- ─── Form Builder Page ────────────────────────────────────────────────── -->
+<style>
+  #page-form.active {
+    display: flex !important;
+    flex-direction: column;
+    height: 100%;
+    margin: -28px -32px;
+    padding: 0;
+  }
+</style>
+<div class="page" id="page-form">
+  <!-- Header -->
+  <div class="fb-header" style="padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: white;">
+    <div class="fb-header-title" style="display: flex; align-items: center; gap: 12px;">
+      <h1 id="fb-main-title" style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin: 0;">Land Eligibility Form</h1>
+      <span class="fb-draft-badge" style="background: #e8f2ec; color: var(--accent-dark); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Draft</span>
+      <button class="fb-icon-btn" style="background: none; border: none; color: var(--text-secondary); cursor: pointer;" title="Edit Title">✏️</button>
+    </div>
+    <div class="fb-header-actions" style="display: flex; gap: 12px;">
+      <button class="btn" style="background: transparent; border: 1px solid var(--border); display:flex; align-items:center; gap:6px; font-weight: 500;">
+        👁️ Preview Form
+      </button>
+      <button class="btn btn-primary" onclick="fbSaveToServer()" style="display:flex; align-items:center; gap:6px;">
+        ✅ Save &amp; Publish <span style="border-left: 1px solid rgba(255,255,255,0.3); padding-left: 6px; margin-left: 2px;">▼</span>
+      </button>
+    </div>
   </div>
-</main>
+  
+  <div id="fb-stepper-container" style="background: white; border-bottom: 1px solid var(--border);">
+     <div id="fb-stepper" class="fb-stepper" style="display: flex; justify-content: center; gap: 48px; padding: 16px;"></div>
+  </div>
+
+  <!-- Visual Builder View -->
+  <div id="fb-visual-view" class="fb-container" style="flex: 1; display: flex; overflow: hidden;">
+    <div class="fb-sidebar-left" style="width: 260px; min-width: 260px; background: white; border-right: 1px solid var(--border); padding: 24px; overflow-y: auto;">
+      <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px; color: var(--text-primary);">Add Fields</div>
+      <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.4;">Drag and drop fields to build your form</div>
+      <div id="fb-palette"></div>
+    </div>
+    
+    <div class="fb-canvas-wrapper" style="flex: 1; background: #f9fafb; overflow-y: auto; display: flex; justify-content: center; padding: 32px 24px;">
+      <div class="fb-canvas" id="fb-canvas-content" style="width: 100%; max-width: 720px;">
+        <!-- Canvas dynamically rendered by JS -->
+      </div>
+    </div>
+    
+    <div class="fb-sidebar-right" style="width: 320px; min-width: 320px; background: white; border-left: 1px solid var(--border); overflow-y: auto;" id="fb-settings">
+      <!-- Settings dynamically rendered by JS -->
+    </div>
+  </div>
+
+  <!-- Raw JSON Fallback / Rules Editor View -->
+  <div id="fb-json-view" class="grid-2" style="display: none; padding: 24px; overflow-y: auto; flex: 1;">
+    <div class="card" style="display: flex; flex-direction: column;">
+      <div class="card-title">Form Schema JSON</div>
+      <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">Directly edit the raw form schema JSON.</p>
+      <textarea id="json-form-schema" style="width: 100%; height: 600px; padding: 12px; font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); border-radius: var(--radius-sm); resize: vertical;" spellcheck="false"></textarea>
+    </div>
+
+    <div class="card" style="display: flex; flex-direction: column;">
+      <div class="card-title">Evaluation Rules JSON</div>
+      <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">Define the rules that flag or fail assessments based on field values.</p>
+      <textarea id="json-eval-rules" style="width: 100%; height: 600px; padding: 12px; font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); border-radius: var(--radius-sm); resize: vertical;" spellcheck="false"></textarea>
+    </div>
+  </div>
+</div>
+
+</div>
+  </main>
 
 <!-- ─── Login Modal ───────────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="login-modal">
@@ -1534,53 +1601,6 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeUploadModal()">Cancel</button>
       <button class="btn btn-primary" id="btn-upload" onclick="doUpload()">⬆️ Upload &amp; Index</button>
-    </div>
-  </div>
-</div>
-
-<!-- ─── Form Builder Page ────────────────────────────────────────────────── -->
-<div class="page" id="page-form">
-  <div class="page-header" style="margin-bottom: 24px;">
-    <div>
-      <div class="page-title" style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 20px;">📝</span> Form Builder &amp; Rules
-      </div>
-      <div class="page-subtitle">Configure the dynamic eligibility form fields and evaluation rules.</div>
-    </div>
-    <button class="btn btn-primary" onclick="fbSaveToServer()">💾 Save Configuration</button>
-  </div>
-  
-  <div id="fb-stepper" class="fb-stepper"></div>
-
-  <!-- Visual Builder View -->
-  <div id="fb-visual-view" class="fb-container">
-    <div class="fb-sidebar-left">
-      <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Add Fields</div>
-      <div style="font-size: 11px; color: #777; margin-bottom: 16px;">Click fields to build your form</div>
-      <div id="fb-palette"></div>
-    </div>
-    
-    <div class="fb-canvas" id="fb-canvas-content">
-      <!-- Canvas dynamically rendered by JS -->
-    </div>
-    
-    <div class="fb-sidebar-right" id="fb-settings">
-      <!-- Settings dynamically rendered by JS -->
-    </div>
-  </div>
-
-  <!-- Raw JSON Fallback / Rules Editor View -->
-  <div id="fb-json-view" class="grid-2" style="display: none;">
-    <div class="card" style="display: flex; flex-direction: column;">
-      <div class="card-title">Form Schema JSON</div>
-      <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">Directly edit the raw form schema JSON.</p>
-      <textarea id="json-form-schema" style="width: 100%; height: 600px; padding: 12px; font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); border-radius: var(--radius-sm); resize: vertical;" spellcheck="false"></textarea>
-    </div>
-
-    <div class="card" style="display: flex; flex-direction: column;">
-      <div class="card-title">Evaluation Rules JSON</div>
-      <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">Define the rules that flag or fail assessments based on field values.</p>
-      <textarea id="json-eval-rules" style="width: 100%; height: 600px; padding: 12px; font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.05); border: 1px solid var(--border); border-radius: var(--radius-sm); resize: vertical;" spellcheck="false"></textarea>
     </div>
   </div>
 </div>
@@ -2465,6 +2485,8 @@ if (!ADMIN_TOKEN) {
       }
     }
   </script>
+  <script src="test.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
   <script src="form-builder.js"></script>
 </body>
 </html>

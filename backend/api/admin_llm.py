@@ -6,7 +6,7 @@ Protected by admin secret key.
 
 from fastapi import APIRouter, Depends, HTTPException, Header
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, Dict, List
 
 from llm.provider import llm_registry, PROVIDER_MODELS
@@ -41,6 +41,8 @@ async def get_llm_status():
 
 # ── POST /api/admin/llm/switch ────────────────────────────────────────────────
 class SwitchLLMRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     provider: str         # claude | openai | groq | gemini
     model_name: str
     api_key: str
@@ -87,6 +89,8 @@ async def switch_llm(req: SwitchLLMRequest, db: AsyncIOMotorDatabase = Depends(g
 
 # ── POST /api/admin/llm/test ──────────────────────────────────────────────────
 class TestLLMRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     provider: str
     model_name: str
     api_key: str

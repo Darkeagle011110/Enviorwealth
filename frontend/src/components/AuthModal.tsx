@@ -66,21 +66,21 @@ export function AuthModal() {
           {!isLogin && (
             <div style={{ marginBottom: "16px" }}>
               <label style={{ display: "block", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>Full Name</label>
-              <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }} />
+              <input suppressHydrationWarning type="text" required value={fullName} onChange={e => setFullName(e.target.value)} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }} />
             </div>
           )}
           <div style={{ marginBottom: "16px" }}>
             <label style={{ display: "block", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>Email</label>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }} />
+            <input suppressHydrationWarning type="email" required value={email} onChange={e => setEmail(e.target.value)} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }} />
           </div>
           <div style={{ marginBottom: "24px" }}>
              <label style={{ display: "block", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>Password</label>
-             <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }} />
+             <input suppressHydrationWarning type="password" required value={password} onChange={e => setPassword(e.target.value)} style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }} />
           </div>
           
           {error && <div style={{ color: 'var(--color-amber)', fontSize: '12px', marginBottom: '16px', textAlign: 'center' }}>{error}</div>}
 
-          <button type="submit" disabled={loading} style={{ width: "100%", padding: "12px", background: "var(--color-emerald)", color: "#000", border: "none", borderRadius: "var(--radius-sm)", fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, marginBottom: '16px' }}>
+          <button suppressHydrationWarning type="submit" disabled={loading} style={{ width: "100%", padding: "12px", background: "var(--color-emerald)", color: "#000", border: "none", borderRadius: "var(--radius-sm)", fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, marginBottom: '16px' }}>
             {loading ? "Processing..." : (isLogin ? "Log In" : "Sign Up")}
           </button>
           

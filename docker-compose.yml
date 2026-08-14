@@ -29,5 +29,23 @@ services:
   # Configure QDRANT_URL and QDRANT_API_KEY in your .env file.
   # ──────────────────────────────────────────────────────────────────
 
+  # ──────────────────────────────────────────────────────────────────
+  # Backend Service
+  # ──────────────────────────────────────────────────────────────────
+  backend:
+    build: 
+      context: ./backend
+    container_name: envirowealth_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://${MONGO_USER:-envirowealth}:${MONGO_PASSWORD:-envirowealth_pass}@mongodb:27017/${MONGODB_DB_NAME:-envirowealth}?authSource=admin
+    volumes:
+      - uploaded_docs:/app/uploaded_docs
+    depends_on:
+      - mongodb
+
 volumes:
   mongodata:
+  uploaded_docs:

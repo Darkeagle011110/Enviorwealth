@@ -5,7 +5,7 @@ export function Sidebar({ onSelectSession, currentSessionId, onNewAssessment }: 
   const [sessions, setSessions] = useState<any[]>([]);
   const [isSecureCardCollapsed, setIsSecureCardCollapsed] = useState(false);
   const { token } = useAuthStore();
-  const API_URL = 'http://localhost:8000';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
   useEffect(() => {
     const timer = setTimeout(() => {

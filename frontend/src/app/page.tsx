@@ -341,6 +341,7 @@ function Accordion({ id, label, children, open, onToggle, accent = "emerald" }: 
   return (
     <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", marginBottom: "4px", border: `1px solid ${open ? "var(--color-border-strong)" : "var(--color-border)"}`, transition: "border-color 0.2s ease" }}>
       <button
+        suppressHydrationWarning
         id={`accordion-${id}`}
         onClick={onToggle}
         style={{ width: "100%", padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", background: open ? "var(--color-bg-panel)" : "transparent", border: "none", cursor: "pointer", transition: "background 0.2s ease" }}
@@ -441,7 +442,7 @@ function MessageBubble({ msg, isNew }: { msg: Message; isNew: boolean }) {
             })}
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: isUser ? 'flex-end' : 'flex-start', gap: '4px' }}>
-            <span style={{ fontSize: '11px', color: isUser ? '#5b8c72' : 'var(--color-text-muted)' }}>{timeString}</span>
+            <span suppressHydrationWarning style={{ fontSize: '11px', color: isUser ? '#5b8c72' : 'var(--color-text-muted)' }}>{timeString}</span>
             {isUser && <span style={{ color: 'var(--color-emerald)', fontSize: '14px', marginLeft: '2px', lineHeight: 1 }}>✔✔</span>}
           </div>
         </div>
@@ -525,7 +526,7 @@ function EligibilityModal({ onClose, onSubmit }: { onClose: () => void, onSubmit
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
       <div style={{ background: "var(--color-bg-panel)", borderRadius: "var(--radius-xl)", width: "100%", maxWidth: "500px", padding: "32px", position: "relative", boxShadow: "var(--shadow-panel)", border: "1px solid var(--color-border)" }}>
-        <button onClick={onClose} style={{ position: "absolute", top: "20px", right: "20px", background: "none", border: "none", color: "var(--color-text-muted)", cursor: "pointer", fontSize: "20px" }}>&times;</button>
+        <button suppressHydrationWarning onClick={onClose} style={{ position: "absolute", top: "20px", right: "20px", background: "none", border: "none", color: "var(--color-text-muted)", cursor: "pointer", fontSize: "20px" }}>&times;</button>
 
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "var(--color-emerald-glow)", border: "1px solid var(--color-emerald-dim)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-emerald)", margin: "0 auto 16px" }}>
@@ -606,16 +607,16 @@ function EligibilityModal({ onClose, onSubmit }: { onClose: () => void, onSubmit
         </div>
 
         <div style={{ display: "flex", gap: "12px", marginTop: "24px", flexDirection: "row-reverse" }}>
-          <button onClick={handleNext} style={{ flex: 1, padding: "12px", background: "var(--color-emerald)", color: "#000", border: "none", borderRadius: "var(--radius-sm)", fontWeight: 600, cursor: "pointer", transition: "all 0.2s ease" }}>
+          <button suppressHydrationWarning onClick={handleNext} style={{ flex: 1, padding: "12px", background: "var(--color-emerald)", color: "#000", border: "none", borderRadius: "var(--radius-sm)", fontWeight: 600, cursor: "pointer", transition: "all 0.2s ease" }}>
             {step === steps.length ? "Submit Assessment" : "Next →"}
           </button>
           {step > 1 && (
-            <button onClick={() => setStep(step - 1)} style={{ padding: "12px 24px", background: "transparent", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontWeight: 500, cursor: "pointer" }}>
+            <button suppressHydrationWarning onClick={() => setStep(step - 1)} style={{ padding: "12px 24px", background: "transparent", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontWeight: 500, cursor: "pointer" }}>
               Back
             </button>
           )}
           {step === 1 && (
-            <button onClick={onClose} style={{ padding: "12px 24px", background: "transparent", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontWeight: 500, cursor: "pointer" }}>
+            <button suppressHydrationWarning onClick={onClose} style={{ padding: "12px 24px", background: "transparent", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontWeight: 500, cursor: "pointer" }}>
               Cancel
             </button>
           )}
@@ -746,6 +747,55 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
+  const handleSelectSession = async (id: string) => {
+    setSessionId(id);
+    setIsLoading(true);
+    setMessages([]);
+    setMemo(null);
+    setUiState({});
+    
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${API_URL}/api/v1/sessions/${id}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      
+      if (response.status === 401) {
+        logout();
+        return;
+      }
+      
+      if (!response.ok) throw new Error("Failed to load session");
+      
+      const data = await response.json();
+      
+      if (data.messages && data.messages.length > 0) {
+        setMessages(data.messages.map((m: any) => ({
+          role: m.role,
+          content: m.content,
+          timestamp: m.timestamp ? new Date(m.timestamp) : new Date()
+        })));
+      } else {
+        setMessages([{ role: "assistant", content: "Let's continue your assessment.", timestamp: new Date() }]);
+      }
+      
+      if (data.intake_data) {
+        // Just setting this to have some UI state if needed, though mostly messages matter
+        setUiState({ stage: "screening", filled_fields: Object.keys(data.intake_data).length });
+      }
+      
+      if (data.verdict) {
+        setMemo(data.verdict as Memo);
+      }
+      
+    } catch (error) {
+      console.error(error);
+      setMessages([{ role: "assistant", content: "Failed to load chat history.", timestamp: new Date() }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return;
 
@@ -765,6 +815,10 @@ export default function Home() {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          logout();
+          throw new Error("Session expired. Please log in again.");
+        }
         const errorText = await response.text();
         throw new Error(`API error ${response.status}: ${errorText}`);
       }
@@ -825,7 +879,7 @@ export default function Home() {
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "var(--color-bg-deep)", fontFamily: "var(--font-sans)" }}>
-      {token && <Sidebar onSelectSession={(id: string) => setSessionId(id)} currentSessionId={sessionId} onNewAssessment={() => { setSessionId(null); setMessages([{ role: "assistant", content: "Let's start a new assessment.", timestamp: new Date() }]); setUiState({}); setMemo(null); }} />}
+      {token && <Sidebar onSelectSession={handleSelectSession} currentSessionId={sessionId} onNewAssessment={() => { setSessionId(null); setMessages([{ role: "assistant", content: "Let's start a new assessment.", timestamp: new Date() }]); setUiState({}); setMemo(null); }} />}
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -840,6 +894,7 @@ export default function Home() {
               </div>
             )}
             <button
+              suppressHydrationWarning
               id="toggle-map-btn"
               onClick={() => setShowMap(v => !v)}
               style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "var(--color-bg-panel)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", cursor: "pointer", fontSize: "13px", fontWeight: 500, color: "var(--color-text-primary)", transition: "all 0.2s ease", boxShadow: "var(--shadow-card)" }}
@@ -855,7 +910,7 @@ export default function Home() {
             </div>
 
             {user && (
-              <button onClick={logout} style={{ padding: '6px 12px', background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '12px', marginLeft: '8px' }}>Logout</button>
+              <button suppressHydrationWarning onClick={logout} style={{ padding: '6px 12px', background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '12px', marginLeft: '8px' }}>Logout</button>
             )}
           </div>
         </header>
@@ -913,7 +968,7 @@ export default function Home() {
                   
                   {isListening ? (
                     <>
-                      <button style={{ width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "#d1d5db", background: "transparent", border: "none" }}>
+                      <button suppressHydrationWarning style={{ width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "#d1d5db", background: "transparent", border: "none" }}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
                       </button>
                       
@@ -930,16 +985,16 @@ export default function Home() {
                         ))}
                       </div>
                       
-                      <button onClick={() => setIsListening(false)} style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", color: "#4b5563", border: "none", cursor: "pointer", marginRight: "8px" }}>
+                      <button suppressHydrationWarning onClick={() => setIsListening(false)} style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", color: "#4b5563", border: "none", cursor: "pointer", marginRight: "8px" }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                       </button>
-                      <button onClick={() => setIsListening(false)} style={{ width: "36px", height: "36px", borderRadius: "50%", background: "white", border: "2px solid black", display: "flex", alignItems: "center", justifyContent: "center", color: "black", cursor: "pointer" }}>
+                      <button suppressHydrationWarning onClick={() => setIsListening(false)} style={{ width: "36px", height: "36px", borderRadius: "50%", background: "white", border: "2px solid black", display: "flex", alignItems: "center", justifyContent: "center", color: "black", cursor: "pointer" }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                       </button>
                     </>
                   ) : (
                     <>
-                      <button style={{ width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280", background: "transparent", border: "none", cursor: "pointer" }}>
+                      <button suppressHydrationWarning style={{ width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280", background: "transparent", border: "none", cursor: "pointer" }}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
                       </button>
                       
@@ -963,11 +1018,11 @@ export default function Home() {
                       
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         
-                        <button onClick={() => setIsListening(true)} style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#374151", background: "transparent", border: "none", cursor: "pointer" }}>
+                        <button suppressHydrationWarning onClick={() => setIsListening(true)} style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#374151", background: "transparent", border: "none", cursor: "pointer" }}>
                           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
                         </button>
                         
-                        <button onClick={() => sendMessage(input)} disabled={isLoading || !input.trim()} style={{ width: "36px", height: "36px", borderRadius: "50%", background: input.trim() && !isLoading ? "black" : "black", border: "none", cursor: input.trim() && !isLoading ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
+                        <button suppressHydrationWarning onClick={() => sendMessage(input)} disabled={isLoading || !input.trim()} style={{ width: "36px", height: "36px", borderRadius: "50%", background: input.trim() && !isLoading ? "black" : "black", border: "none", cursor: input.trim() && !isLoading ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
                         </button>
                       </div>

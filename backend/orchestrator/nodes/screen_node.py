@@ -52,6 +52,11 @@ REQUIRED_FIELDS = [
         "Would you plant trees on this land even if there were no carbon credit income? Please answer yes or no. "
         "*(This is the additionality test — carbon credits are only given for planting that would NOT have happened without the carbon incentive. Answering yes doesn't disqualify you, but it does reduce confidence.)*"
     ),
+    (
+        "location_state",
+        "Which Indian state is this land located in? "
+        "*(Different states have different forest definitions, legal classifications, and agroforestry policies that affect eligibility.)*"
+    ),
 ]
 
 

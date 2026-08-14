@@ -16,7 +16,7 @@ from datetime import datetime, date, timezone
 from typing import Any, Dict, List, Optional
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 def _now() -> datetime:
@@ -29,6 +29,8 @@ def _new_id() -> str:
 
 # ── LLM Provider Config ───────────────────────────────────────────────────────
 class LLMProviderConfigDoc(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     id: str = Field(default_factory=_new_id)
     is_active: bool = False
     is_fallback: bool = False

@@ -44,9 +44,33 @@ async def get_dashboard_kpis(db: AsyncIOMotorDatabase = Depends(get_db)):
     if assessments_started > 0:
         lead_conversion = (leads_generated / assessments_started) * 100
         
-    # 8. Average assessment completion
-    average_assessment_completion = "2m 14s"
-    
+    # 8. Average assessment completion (real calculation)
+    # Calculate average difference between updated_at and created_at in assessment_sessions
+    pipeline = [
+        {"$project": {
+            "duration": {"$subtract": ["$updated_at", "$created_at"]}
+        }},
+        {"$group": {
+            "_id": None,
+            "avg_duration": {"$avg": "$duration"}
+        }}
+    ]
+    avg_duration_ms = 0
+    try:
+        cursor = db.assessment_sessions.aggregate(pipeline)
+        result = await cursor.to_list(length=1)
+        if result and result[0].get("avg_duration"):
+            avg_duration_ms = result[0]["avg_duration"]
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to calculate avg completion: {e}")
+        
+    if avg_duration_ms > 0:
+        total_seconds = int(avg_duration_ms / 1000)
+        minutes, seconds = divmod(total_seconds, 60)
+        average_assessment_completion = f"{minutes}m {seconds}s"
+    else:
+        average_assessment_completion = "0m 0s"
     return DashboardKPIs(
         total_users=total_users,
         assessments_started=assessments_started,
