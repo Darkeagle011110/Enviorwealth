@@ -541,50 +541,52 @@ function fbLoadDefaultForm() {
     steps: [
       {
         step_id: "s1",
-        title: "Land Area",
-        description: "Please provide the size of your land.",
+        title: "1. Where is your land located?",
+        description: "Please provide the state and district of your land.",
         fields: [
-          { field_id: "area_ha", label: "What is the total area of your land? (in hectares)", type: "number", required: true, options: null }
+          { field_id: "state", label: "State", type: "dropdown", required: true, options: ["Gujarat", "Maharashtra", "Rajasthan"] },
+          { field_id: "district", label: "District", type: "dropdown", required: true, options: ["Ahmedabad", "Surat", "Mumbai", "Pune", "Jaipur", "Jodhpur"] }
         ]
       },
       {
         step_id: "s2",
-        title: "Ownership",
-        description: "Let us know about your land tenure.",
+        title: "2. How large is the land?",
+        description: "The economics of carbon projects depend heavily on scale.",
         fields: [
-          { field_id: "tenure_type", label: "What is the ownership/tenure type of the land?", type: "dropdown", required: true, options: ["Owned", "Leased", "Community", "Government", "Disputed"] }
+          { field_id: "area_ha", label: "Area (in Hectares)", type: "number", required: true, placeholder: "e.g. 5", options: null }
         ]
       },
       {
         step_id: "s3",
-        title: "Legal Classification",
-        description: "How is your land legally classified?",
+        title: "3. What is your tenure status?",
+        description: "Tenure affects who holds the carbon rights.",
         fields: [
-          { field_id: "land_legal_class", label: "What is the legal classification of the land?", type: "dropdown", required: true, options: ["Revenue - Agricultural", "Revenue - Fallow", "Recorded Forest", "Community", "Coastal", "Urban"] }
+          { field_id: "tenure_type", label: "Tenure Type", type: "dropdown", required: true, options: ["Owned Outright", "Leased", "Community / Panchayat Land", "Government-granted", "Disputed"] }
         ]
       },
       {
         step_id: "s4",
-        title: "Existing Tree Cover",
-        description: "Estimate the current tree canopy.",
+        title: "4. Land Legal Classification",
+        description: "Planting on recorded forest land is generally ineligible.",
         fields: [
-          { field_id: "existing_tree_cover_pct", label: "What percentage of the land currently has tree cover?", type: "number", required: true, placeholder: "0 - 100", options: null }
+          { field_id: "land_legal_class", label: "Legal Classification", type: "dropdown", required: true, options: ["Revenue Fallow", "Revenue Agricultural", "Recorded Forest", "Wasteland"] }
         ]
       },
       {
         step_id: "s5",
-        title: "Planting Status",
-        description: "Tell us about your planting timeline.",
+        title: "5. Existing Tree Cover",
+        description: "Roughly what percentage of your land currently has tree cover?",
         fields: [
-          { field_id: "planting_status", label: "What is the current planting status?", type: "dropdown", required: true, options: ["Not started", "Planned this year", "Planted < 2 years ago", "Planted 2-5 years ago", "Planted > 5 years ago"] }
+          { field_id: "existing_tree_cover_pct", label: "Tree Cover Percentage (0-100%)", type: "number", required: true, placeholder: "e.g. 10", options: null }
         ]
       },
       {
         step_id: "s6",
-        title: "Additionality",
-        description: "A key requirement for carbon projects.",
+        title: "6. Planting & Additionality",
+        description: "",
         fields: [
-          { field_id: "would_plant_anyway", label: "Would you have planted trees here even without carbon credits?", type: "yes_no", required: true, options: null }
+          { field_id: "planting_status", label: "Have you already started planting trees?", type: "dropdown", required: true, options: ["Not started yet", "Planning to plant this year", "Planted within the last 2-5 years", "Planted more than 5 years ago"] },
+          { field_id: "would_plant_anyway", label: "Would you plant trees even without carbon credit income?", type: "yes_no", required: true, options: null }
         ]
       }
     ]

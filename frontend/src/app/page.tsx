@@ -554,9 +554,11 @@ function EligibilityModal({ onClose, onSubmit }: { onClose: () => void, onSubmit
             <h3 style={{ fontSize: "15px", fontWeight: 600, marginBottom: "8px" }}>{currentStep.title}</h3>
             {currentStep.description && <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", marginBottom: "16px" }}>{currentStep.description}</p>}
             
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {currentStep.fields.map((f: any) => (
-                <div key={f.field_id}>
+            <div style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: "16px" }}>
+              {currentStep.fields.map((f: any) => {
+                const isSideBySide = currentStep.fields.length === 2 && currentStep.step_id === "s1";
+                return (
+                <div key={f.field_id} style={{ flex: isSideBySide ? "1 1 45%" : "1 1 100%" }}>
                   <label style={{ display: "block", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>
                     {f.label} {f.required && <span style={{ color: "var(--color-amber)" }}>*</span>}
                   </label>
@@ -593,7 +595,8 @@ function EligibilityModal({ onClose, onSubmit }: { onClose: () => void, onSubmit
                   )}
                   {f.description && <div style={{ fontSize: "10px", color: "var(--color-text-muted)", marginTop: "4px" }}>{f.description}</div>}
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
 
