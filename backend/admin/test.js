@@ -1,20 +1,6 @@
 
 // ── Config ──────────────────────────────────────────────────────────────────
-const API_BASE = window.location.origin;
-let ADMIN_TOKEN = localStorage.getItem('admin_token') || '';
-
-if (!ADMIN_TOKEN) {
-  document.getElementById('login-modal').classList.add('open');
-}
-
-const authHeader = () => ({
-  'Authorization': `Bearer ${ADMIN_TOKEN}`,
-});
-
-const headers = () => ({
-  'Content-Type': 'application/json',
-  ...authHeader(),
-});
+// Globals are already declared in index.html
 
 function onMultilingualToggle() {
   const isEnabled = document.getElementById('toggle-multilingual').checked;

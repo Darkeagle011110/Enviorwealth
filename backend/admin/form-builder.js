@@ -544,7 +544,9 @@ async function fbSaveToServer() {
 
     toast('✅ Form & Rules saved successfully', 'ok');
   } catch (e) {
+    console.error(e);
     toast(`❌ ${e.message}`, 'err');
+    alert(`Save failed: ${e.message}`);
   }
 }
 

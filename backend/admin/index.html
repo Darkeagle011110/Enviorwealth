@@ -1466,7 +1466,7 @@
       <button class="fb-icon-btn" style="background: none; border: none; color: var(--text-secondary); cursor: pointer;" title="Edit Title">✏️</button>
     </div>
     <div class="fb-header-actions" style="display: flex; gap: 12px;">
-      <button class="btn" style="background: transparent; border: 1px solid var(--border); display:flex; align-items:center; gap:6px; font-weight: 500;">
+      <button class="btn" onclick="window.open('/', '_blank')" style="background: transparent; border: 1px solid var(--border); display:flex; align-items:center; gap:6px; font-weight: 500;">
         👁️ Preview Form
       </button>
       <button class="btn btn-primary" onclick="fbSaveToServer()" style="display:flex; align-items:center; gap:6px;">
@@ -2448,43 +2448,7 @@ if (!ADMIN_TOKEN) {
         toast('Failed to update status', 'err');
       }
     }
-    async function saveFormConfig() {
-      try {
-        const schema = JSON.parse(document.getElementById('json-form-schema').value);
-        const rules = JSON.parse(document.getElementById('json-eval-rules').value);
-
-        let res = await fetch(`${API_BASE}/api/admin/form/form-schema`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', ...headers() },
-          body: JSON.stringify(schema)
-        });
-        if (!res.ok) throw new Error('Failed to save schema');
-
-        res = await fetch(`${API_BASE}/api/admin/form/eval-config`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', ...headers() },
-          body: JSON.stringify(rules)
-        });
-        if (!res.ok) throw new Error('Failed to save rules');
-
-        toast('✅ Form & Rules saved successfully', 'ok');
-      } catch (e) {
-        toast(`❌ ${e.message}`, 'err');
-      }
-    }
-
-    async function loadFormConfig() {
-      try {
-        const schemaRes = await fetch(`${API_BASE}/api/admin/form/form-schema`, { headers: headers() });
-        const rulesRes = await fetch(`${API_BASE}/api/admin/form/eval-config`, { headers: headers() });
-        const schema = await schemaRes.json();
-        const rules = await rulesRes.json();
-        document.getElementById('json-form-schema').value = JSON.stringify(schema, null, 2);
-        document.getElementById('json-eval-rules').value = JSON.stringify(rules, null, 2);
-      } catch (e) {
-        toast('❌ Failed to load form config', 'err');
-      }
-    }
+    // Form builder logic is handled in form-builder.js
   </script>
   <script src="test.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
