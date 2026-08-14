@@ -519,6 +519,19 @@ function fbRenderSettings() {
   `;
 }
 
+function fbPreviewForm() {
+  let frontendUrl = localStorage.getItem('frontend_url');
+  if (!frontendUrl) {
+    frontendUrl = prompt("Please enter the URL of your deployed frontend (e.g., https://your-frontend.vercel.app or http://localhost:3000):", "http://localhost:3000");
+    if (frontendUrl) {
+      localStorage.setItem('frontend_url', frontendUrl);
+    }
+  }
+  if (frontendUrl) {
+    window.open(frontendUrl, '_blank');
+  }
+}
+
 // Intercept
 async function fbSaveToServer() {
   try {
