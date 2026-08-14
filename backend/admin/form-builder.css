@@ -1,7 +1,8 @@
 /* Form Builder Layout */
 .fb-container {
   display: flex;
-  height: calc(100vh - 120px);
+  flex: 1;
+  min-height: 0;
   gap: 16px;
 }
 

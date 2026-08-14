@@ -12,12 +12,13 @@ let fbState = {
         title: "Check Your Land Eligibility",
         description: "Answer a few quick questions and get a preliminary assessment of your land's eligibility for carbon credits.",
         fields: [
-          { field_id: "f1", label: "Where is your land located?", description: "Please provide the state and district of your land.", type: "dropdown", required: true, options: ["Andhra Pradesh", "Karnataka", "Maharashtra", "Tamil Nadu"] },
-          { field_id: "f2", label: "What is the total area of your land?", description: "", type: "number", required: false, options: null },
-          { field_id: "f3", label: "What is the current land use?", description: "", type: "dropdown", required: false, options: ["Private agricultural land (patta/revenue land)", "Private fallow / degraded / wasteland", "Leased private land", "Recorded Forest Area / government forest", "Community / panchayat / commons land", "Grassland, scrub, open natural ecosystem"] },
-          { field_id: "f4", label: "Do you have legal ownership documents?", description: "", type: "yes_no", required: false, options: null },
-          { field_id: "f5", label: "Has the land been used for any carbon project before?", description: "", type: "yes_no", required: false, options: null },
-          { field_id: "f6", label: "Upload relevant land documents", description: "", type: "file_upload", required: false, options: null }
+          { field_id: "f1", label: "Where is your land located? (State)", description: "Please select the state.", type: "dropdown", required: true, options: ["Gujarat", "Maharashtra", "Rajasthan"] },
+          { field_id: "f2", label: "District / City", description: "Select the nearest city or district.", type: "dropdown", required: true, options: ["Ahmedabad", "Surat", "Mumbai", "Pune", "Jaipur", "Jodhpur"] },
+          { field_id: "f3", label: "What is the total area of your land?", description: "In hectares", type: "number", required: true, options: null },
+          { field_id: "f4", label: "What is the current land use?", description: "", type: "dropdown", required: true, options: ["Private agricultural land (patta/revenue land)", "Private fallow / degraded / wasteland", "Leased private land", "Recorded Forest Area / government forest", "Community / panchayat / commons land", "Grassland, scrub, open natural ecosystem"] },
+          { field_id: "f5", label: "Do you have legal ownership documents?", description: "", type: "yes_no", required: true, options: null },
+          { field_id: "f6", label: "Has the land been used for any carbon project before?", description: "", type: "yes_no", required: true, options: null },
+          { field_id: "f7", label: "Upload relevant land documents", description: "PDF or Images", type: "file_upload", required: false, options: null }
         ]
       }
     ]
