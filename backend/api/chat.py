@@ -16,7 +16,7 @@ from orchestrator.graph import orchestrator_app
 from session.manager import session_manager
 from utils.crm_sync import sync_state_to_crm
 from memo.template_engine import MemoTemplateEngine
-from api.client_auth import get_optional_client_user
+from api.client_auth import get_optional_client_user, get_current_client_user
 from models.schemas import ClientUserDoc
 from models.mongodb import get_db
 import asyncio
