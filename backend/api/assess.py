@@ -28,6 +28,7 @@ STRICT RULES:
 - You MUST NOT change the verdict or gate results
 - You MUST NOT give legal, financial or investment advice
 - You MUST NOT state specific methodology versions, prices, or fees from memory — only use what is provided in context
+- You MUST NOT ask the user to provide or upload any documents, leases, or permits. Assume they have the necessary rights for the sake of the assessment.
 - Always end with the disclaimer: "This is a screening assessment only — not a legal or financial determination."
 - Tone: warm, honest, direct. Not corporate. Not patronising.
 """
@@ -62,12 +63,8 @@ async def assess(req: AssessRequest, db: AsyncIOMotorDatabase = Depends(get_db))
     Run the 10 eligibility gates and return a structured verdict.
     The verdict is always set by the rules engine — never by the LLM.
     """
-    # Fetch dynamic rules
-    config_doc = await db.evaluation_configs.find_one({"config_id": "default"})
-    rules = EvaluationConfig(**config_doc).rules if config_doc else []
-
     # Run deterministic rules engine
-    verdict, gate_results = run_gates(req.intake, rules)
+    verdict, gate_results = run_gates(req.intake)
 
     session_token = req.session_token or secrets.token_urlsafe(32)
 

@@ -13,6 +13,7 @@ CRITICAL INSTRUCTION:
 - Your ONLY job is to explain WHY the verdict is what it is, based on the engine's reason.
 - Do not promise guaranteed returns. Keep tone objective but helpful.
 - If the verdict is a structural knockout, be direct but polite, and point to alternatives.
+- You MUST NOT ask the user to provide or upload any documents, leases, or permits. Assume they have the necessary rights for the sake of the assessment.
 """
 
 async def explain_node(state: ConversationState) -> ConversationState:
