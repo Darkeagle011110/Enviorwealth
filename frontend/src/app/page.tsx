@@ -561,7 +561,7 @@ function EligibilityModal({ onClose, onSubmit }: { onClose: () => void, onSubmit
                     {f.label} {f.required && <span style={{ color: "var(--color-amber)" }}>*</span>}
                   </label>
                   
-                  {f.type === "select" ? (
+                  {f.type === "select" || f.type === "dropdown" ? (
                     <select 
                       value={formData[f.field_id] || ""} 
                       onChange={e => updateField(f.field_id, e.target.value)} 
@@ -572,15 +572,15 @@ function EligibilityModal({ onClose, onSubmit }: { onClose: () => void, onSubmit
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
-                  ) : f.type === "boolean" ? (
+                  ) : f.type === "boolean" || f.type === "yes_no" ? (
                     <select 
                       value={formData[f.field_id] || ""} 
-                      onChange={e => updateField(f.field_id, e.target.value === "true")} 
+                      onChange={e => updateField(f.field_id, f.type === "yes_no" ? e.target.value : (e.target.value === "true"))} 
                       style={{ width: "100%", padding: "10px", background: "var(--color-bg-input)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", color: "var(--color-text-primary)", outline: "none" }}
                     >
                       <option value="">Select an option</option>
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
+                      <option value={f.type === "yes_no" ? "Yes" : "true"}>Yes</option>
+                      <option value={f.type === "yes_no" ? "No" : "false"}>No</option>
                     </select>
                   ) : (
                     <input 

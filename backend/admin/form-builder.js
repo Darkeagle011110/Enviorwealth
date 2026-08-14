@@ -541,14 +541,49 @@ function fbLoadDefaultForm() {
     steps: [
       {
         step_id: "s1",
-        title: "Carbon Eligibility Screening",
-        description: "Please provide the following details about your land.",
+        title: "Land Area",
+        description: "Please provide the size of your land.",
         fields: [
-          { field_id: "area_ha", label: "What is the total area of your land? (in hectares)", type: "number", required: true, options: null },
-          { field_id: "tenure_type", label: "What is the ownership/tenure type of the land?", type: "dropdown", required: true, options: ["Owned", "Leased", "Community", "Government", "Disputed"] },
-          { field_id: "land_legal_class", label: "What is the legal classification of the land?", type: "dropdown", required: true, options: ["Revenue - Agricultural", "Revenue - Fallow", "Recorded Forest", "Community", "Coastal", "Urban"] },
-          { field_id: "existing_tree_cover_pct", label: "What percentage of the land currently has tree cover?", type: "number", required: true, placeholder: "0 - 100", options: null },
-          { field_id: "planting_status", label: "What is the current planting status?", type: "dropdown", required: true, options: ["Not started", "Planned this year", "Planted < 2 years ago", "Planted 2-5 years ago", "Planted > 5 years ago"] },
+          { field_id: "area_ha", label: "What is the total area of your land? (in hectares)", type: "number", required: true, options: null }
+        ]
+      },
+      {
+        step_id: "s2",
+        title: "Ownership",
+        description: "Let us know about your land tenure.",
+        fields: [
+          { field_id: "tenure_type", label: "What is the ownership/tenure type of the land?", type: "dropdown", required: true, options: ["Owned", "Leased", "Community", "Government", "Disputed"] }
+        ]
+      },
+      {
+        step_id: "s3",
+        title: "Legal Classification",
+        description: "How is your land legally classified?",
+        fields: [
+          { field_id: "land_legal_class", label: "What is the legal classification of the land?", type: "dropdown", required: true, options: ["Revenue - Agricultural", "Revenue - Fallow", "Recorded Forest", "Community", "Coastal", "Urban"] }
+        ]
+      },
+      {
+        step_id: "s4",
+        title: "Existing Tree Cover",
+        description: "Estimate the current tree canopy.",
+        fields: [
+          { field_id: "existing_tree_cover_pct", label: "What percentage of the land currently has tree cover?", type: "number", required: true, placeholder: "0 - 100", options: null }
+        ]
+      },
+      {
+        step_id: "s5",
+        title: "Planting Status",
+        description: "Tell us about your planting timeline.",
+        fields: [
+          { field_id: "planting_status", label: "What is the current planting status?", type: "dropdown", required: true, options: ["Not started", "Planned this year", "Planted < 2 years ago", "Planted 2-5 years ago", "Planted > 5 years ago"] }
+        ]
+      },
+      {
+        step_id: "s6",
+        title: "Additionality",
+        description: "A key requirement for carbon projects.",
+        fields: [
           { field_id: "would_plant_anyway", label: "Would you have planted trees here even without carbon credits?", type: "yes_no", required: true, options: null }
         ]
       }
