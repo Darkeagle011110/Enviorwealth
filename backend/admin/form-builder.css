@@ -11,7 +11,7 @@
   background: #fff;
   border: 1px solid var(--border, #eee);
   border-radius: 12px;
-  padding: 16px;
+  padding: 16px 16px 80px 16px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -22,7 +22,7 @@
   background: #fafafa;
   border: 1px solid var(--border, #eee);
   border-radius: 12px;
-  padding: 24px;
+  padding: 24px 24px 80px 24px;
   overflow-y: auto;
   position: relative;
 }
@@ -32,7 +32,7 @@
   background: #fff;
   border: 1px solid var(--border, #eee);
   border-radius: 12px;
-  padding: 16px;
+  padding: 16px 16px 80px 16px;
   overflow-y: auto;
 }
 
