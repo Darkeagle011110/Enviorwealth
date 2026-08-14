@@ -127,7 +127,7 @@ app.include_router(admin_form_router,  prefix="/api/admin/form", tags=["Admin �
 app.include_router(admin_channels_router, prefix="/api/admin/channels", tags=["Admin – Channels"], dependencies=admin_dependencies)
 
 # ── Admin Panel Static Files ──────────────────────────────────────────────────
-admin_static_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "admin"))
+admin_static_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "admin"))
 if os.path.exists(admin_static_path):
     app.mount("/admin", StaticFiles(directory=admin_static_path, html=True), name="admin")
     logger.info("Admin panel mounted at /admin")
