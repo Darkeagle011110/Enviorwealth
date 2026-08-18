@@ -6,6 +6,10 @@ Phase 1: Rules Engine + RAG Foundation + Admin Panel
 import asyncio
 import logging
 import os
+
+# Suppress HuggingFace symlinks warning on Windows (symlinks need Developer Mode).
+# The model still downloads and works correctly — just without symlinks.
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends
@@ -33,10 +37,9 @@ from api.auth import router as auth_router, get_current_admin_user
 from api.user import router as user_router
 from api.client_auth import router as client_auth_router
 
-logging.basicConfig(
-    level=getattr(logging, settings.log_level.upper(), logging.INFO),
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-)
+from utils.logging_config import setup_logging
+
+setup_logging(log_level=getattr(settings, "log_level", "INFO"))
 logger = logging.getLogger(__name__)
 
 
@@ -44,38 +47,43 @@ async def _background_init():
     """Run DB init and LLM config load in the background after the server
     has already bound its port. This prevents Render port-scan timeouts."""
     # ── MongoDB indexes + Qdrant collections ──────────────────────────────
+    logger.info("[STARTUP] Initialising database indexes and Qdrant collections...")
     try:
         from init_db import init_all
         await init_all()
+        logger.info("[STARTUP] ✅ Database initialisation complete.")
     except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
+        logger.error(f"[STARTUP] ❌ Database initialization failed: {e}", exc_info=True)
 
     # ── LLM config: DB first, env-var fallback ────────────────────────────
+    logger.info("[STARTUP] Loading LLM provider configuration...")
     try:
         db = get_database()
         await llm_registry.initialize_from_db(db)
+        logger.info("[STARTUP] ✅ LLM config loaded from database.")
     except Exception as e:
-        logger.warning(f"DB LLM config load failed ({e}) — falling back to env vars")
+        logger.warning(f"[STARTUP] ⚠️  DB LLM config load failed ({e}) — falling back to env vars")
         await llm_registry.initialize_from_env()
+        logger.info("[STARTUP] ✅ LLM config loaded from environment variables.")
 
-    logger.info(f"LLM status: {llm_registry.get_status()}")
+    llm_status = llm_registry.get_status()
+    logger.info(f"[STARTUP] LLM status: {llm_status}")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ──────────────────────────────────────────────────────────────
-    logger.info("Starting Carbon Market Eligibility Chatbot API...")
+    logger.info("="*60)
+    logger.info("[STARTUP] 🚀 Carbon Market Eligibility Chatbot API starting...")
+    logger.info(f"[STARTUP] Log files → backend/logs/ (all.log | error.log | agents.log)")
 
-    # Yield immediately so Uvicorn binds the port right away.
-    # DB init + LLM config run in the background — this prevents Render's
-    # port-scan from timing out while we wait for MongoDB connections.
     task = asyncio.create_task(_background_init())
 
-    logger.info("API ready (background DB init in progress).")
+    logger.info("[STARTUP] ✅ API ready — port bound. Background init running.")
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────────────
-    logger.info("Shutting down...")
+    logger.info("[SHUTDOWN] 🛑 Shutting down gracefully...")
     task.cancel()
     try:
         await task
@@ -83,6 +91,7 @@ async def lifespan(app: FastAPI):
         pass
     await close_client()
     await close_qdrant()
+    logger.info("[SHUTDOWN] ✅ All connections closed.")
 
 
 # ── App ───────────────────────────────────────────────────────────────────────

@@ -16,6 +16,8 @@ from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 
 logger = logging.getLogger(__name__)
 
+_local_embedding_model = None
+
 
 class Chunk(BaseModel):
     chunk_id: str
@@ -34,6 +36,7 @@ class Retriever:
         """Embed a query string using the configured embedding provider."""
         try:
             if settings.openai_api_key and settings.embedding_provider == "openai":
+                logger.debug("Using OpenAI embeddings provider.")
                 from openai import AsyncOpenAI
                 client = AsyncOpenAI(api_key=settings.openai_api_key)
                 response = await client.embeddings.create(
@@ -42,14 +45,31 @@ class Retriever:
                 )
                 return response.data[0].embedding
 
-            # Local fallback
-            from sentence_transformers import SentenceTransformer
-            model = SentenceTransformer(settings.local_embedding_model)
-            vectors = model.encode([query])
+            # ── Local fallback: fastembed (ONNX-based, no PyTorch needed) ──────
+            # fastembed is much lighter than sentence-transformers and works
+            # reliably on Windows without torchgen / PyTorch installation issues.
+            global _local_embedding_model
+            if _local_embedding_model is None:
+                logger.info(
+                    f"Loading local fastembed model: {settings.local_embedding_model} "
+                    f"(first call only — cached for subsequent requests)"
+                )
+                import asyncio
+                from fastembed import TextEmbedding
+                _local_embedding_model = await asyncio.to_thread(
+                    TextEmbedding, settings.local_embedding_model
+                )
+                logger.info("✅ fastembed model loaded and cached.")
+
+            import asyncio
+            # fastembed.embed() is a generator — run it in a thread to avoid blocking
+            vectors = await asyncio.to_thread(
+                lambda: list(_local_embedding_model.embed([query]))
+            )
             return vectors[0].tolist()
 
         except Exception as e:
-            logger.error(f"Query embedding failed: {e}")
+            logger.error(f"Query embedding failed: {e}", exc_info=True)
             return None
 
     async def search(self, query: str, top_k: int = 5) -> List[Chunk]:
@@ -59,7 +79,11 @@ class Retriever:
         Returns up to top_k Chunk objects, sorted by relevance.
         Returns [] if embedding service or Qdrant is unavailable.
         """
-        embedding = await self._embed_query(query)
+        from utils.logging_config import TimedOperation
+
+        with TimedOperation(logger, "Embedding Generation"):
+            embedding = await self._embed_query(query)
+            
         if embedding is None:
             logger.warning("Could not embed query — returning empty retrieval results.")
             return []
@@ -67,20 +91,23 @@ class Retriever:
         try:
             qdrant = get_async_qdrant()
             
-            # Search Qdrant, filtering for active documents
-            results = await qdrant.search(
-                collection_name=settings.qdrant_collection_name,
-                query_vector=embedding,
-                limit=top_k,
-                query_filter=Filter(
-                    must=[
-                        FieldCondition(
-                            key="is_active",
-                            match=MatchValue(value=True)
-                        )
-                    ]
+            with TimedOperation(logger, "Qdrant Vector Search", {"query": query[:50]}):
+                # query_points() is the v1.13+ replacement for the removed .search()
+                query_result = await qdrant.query_points(
+                    collection_name=settings.qdrant_collection_name,
+                    query=embedding,
+                    limit=top_k,
+                    query_filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="is_active",
+                                match=MatchValue(value=True)
+                            )
+                        ]
+                    ),
+                    with_payload=True,
                 )
-            )
+                results = query_result.points
             
             chunks = []
             for hit in results:

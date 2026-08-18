@@ -1,7 +1,7 @@
 """
 Embedder — generates embeddings and stores them in Qdrant (vectors) and MongoDB (metadata).
-Supports OpenAI text-embedding-3-small (primary) with local
-sentence-transformers fallback.
+Primary: fastembed (ONNX-based, free, no API key needed) — BAAI/bge-small-en-v1.5 → 384-dim.
+Optional: OpenAI text-embedding-3-small (1536-dim) when OPENAI_API_KEY + embedding_provider=openai.
 """
 
 from __future__ import annotations
@@ -28,19 +28,39 @@ async def _embed_openai(texts: List[str]) -> List[List[float]]:
     return [item.embedding for item in response.data]
 
 
-def _embed_local(texts: List[str]) -> List[List[float]]:
-    from sentence_transformers import SentenceTransformer
-    model = SentenceTransformer(settings.local_embedding_model)
-    return model.encode(texts).tolist()
+# Module-level cache so the model is only loaded once per process
+_fastembed_model = None
+
+
+async def _embed_local(texts: List[str]) -> List[List[float]]:
+    """Embed using fastembed (ONNX, no PyTorch, fully free)."""
+    global _fastembed_model
+    import asyncio
+    if _fastembed_model is None:
+        from fastembed import TextEmbedding
+        logger.info(
+            f"Loading fastembed model '{settings.local_embedding_model}' "
+            f"(first call only — cached afterwards)"
+        )
+        _fastembed_model = await asyncio.to_thread(
+            TextEmbedding, settings.local_embedding_model
+        )
+        logger.info("✅ fastembed model loaded.")
+    embeddings = await asyncio.to_thread(
+        lambda: list(_fastembed_model.embed(texts))
+    )
+    return [e.tolist() for e in embeddings]
 
 
 async def _get_embeddings(texts: List[str]) -> List[List[float]]:
     if settings.openai_api_key and settings.embedding_provider == "openai":
         try:
+            logger.debug("Using OpenAI embeddings for ingestion.")
             return await _embed_openai(texts)
         except Exception as e:
-            logger.warning(f"OpenAI embedding failed, falling back to local: {e}")
-    return _embed_local(texts)
+            logger.warning(f"OpenAI embedding failed, falling back to fastembed: {e}")
+    logger.debug("Using local fastembed embeddings for ingestion.")
+    return await _embed_local(texts)
 
 
 async def embed_and_store_chunks(

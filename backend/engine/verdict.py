@@ -246,7 +246,9 @@ def _what_we_could_not_check(intake: Tier1Intake) -> List[str]:
         missing.append("10-year land-use history (satellite verification)")
     if intake.existing_tree_cover_pct is None:
         missing.append("Current tree cover (remote-sensing measurement)")
-    if intake.tenure_type and intake.tenure_type.value in ("leased", "community"):
+    
+    tenure_val = getattr(intake.tenure_type, "value", intake.tenure_type) if intake.tenure_type else None
+    if tenure_val in ("leased", "community"):
         missing.append("Lease agreement review for carbon rights clauses")
     missing.append("Title documents (7/12 extract, RTC, patta)")
     missing.append("Overlap with registered projects in Verra / CCTS registry")

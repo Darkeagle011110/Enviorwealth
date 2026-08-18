@@ -124,20 +124,35 @@ class LLMProviderRegistry:
 
         async with self._lock:
             if active:
-                api_key = decrypt_data(active.get("api_key_enc", ""))
-                self._primary = self._build_adapter(
-                    active.get("provider"), active.get("model_name"), api_key, active.get("extra_params", {})
-                )
-                self._primary_meta = {"provider": active.get("provider"), "model_name": active.get("model_name")}
-                logger.info(f"Active LLM loaded from DB: {active.get('provider')}/{active.get('model_name')}")
+                try:
+                    api_key = decrypt_data(active.get("api_key_enc", ""))
+                    self._primary = self._build_adapter(
+                        active.get("provider"), active.get("model_name"), api_key, active.get("extra_params", {})
+                    )
+                    self._primary_meta = {"provider": active.get("provider"), "model_name": active.get("model_name")}
+                    logger.info(f"Active LLM loaded from DB: {active.get('provider')}/{active.get('model_name')}")
+                except Exception as e:
+                    logger.error(
+                        f"Failed to initialise primary LLM adapter from DB config "
+                        f"({active.get('provider')}/{active.get('model_name')}): {e}. "
+                        "Server will fall back to env-var configuration.",
+                        exc_info=True,
+                    )
 
             if fallback:
-                api_key = decrypt_data(fallback.get("api_key_enc", ""))
-                self._fallback = self._build_adapter(
-                    fallback.get("provider"), fallback.get("model_name"), api_key, fallback.get("extra_params", {})
-                )
-                self._fallback_meta = {"provider": fallback.get("provider"), "model_name": fallback.get("model_name")}
-                logger.info(f"Fallback LLM loaded from DB: {fallback.get('provider')}/{fallback.get('model_name')}")
+                try:
+                    api_key = decrypt_data(fallback.get("api_key_enc", ""))
+                    self._fallback = self._build_adapter(
+                        fallback.get("provider"), fallback.get("model_name"), api_key, fallback.get("extra_params", {})
+                    )
+                    self._fallback_meta = {"provider": fallback.get("provider"), "model_name": fallback.get("model_name")}
+                    logger.info(f"Fallback LLM loaded from DB: {fallback.get('provider')}/{fallback.get('model_name')}")
+                except Exception as e:
+                    logger.error(
+                        f"Failed to initialise fallback LLM adapter from DB config "
+                        f"({fallback.get('provider')}/{fallback.get('model_name')}): {e}.",
+                        exc_info=True,
+                    )
 
     async def switch_provider(
         self,

@@ -1,25 +1,50 @@
+"""
+llm_schemas.py — Pydantic schemas for structured LLM outputs.
+
+Simplified for the 4-agent architecture:
+- OrchestratorRoute: 3 options (was 10) — much more reliable structured output
+- FieldExtraction: unchanged — used by eligibility_agent
+- ExplainOutput: unchanged — used by eligibility_agent
+- FactualAnswer, AgenticCriticOutput: kept for compatibility (used in tests)
+"""
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
-class TurnRoute(BaseModel):
-    """Router classification for the next turn type."""
-    route_type: str = Field(
+# ─── Orchestrator routing (Tier-3 LLM fallback) ───────────────────────────────
+
+class OrchestratorDecision(BaseModel):
+    """
+    The Orchestrator's LLM decision output.
+    Either routes to a sub-agent OR provides a direct inline reply.
+    """
+    route_to: str = Field(
         ...,
         description=(
-            "Must be exactly one of: 'consult', 'start_screening', 'intake_answer', "
-            "'factual_question', 'edge_case', 'offer_review', 'out_of_scope_legal', "
-            "'out_of_scope_guarantee', 'green_credit_correction', 'scepticism_handling'"
-        )
+            "Must be exactly one of: "
+            "'rag' (user needs factual info from the carbon credit knowledge base), "
+            "'eligibility' (user wants to check eligibility of something), "
+            "'inline' (you answer this yourself — greetings, simple Qs, out-of-domain, refusals)"
+        ),
     )
-    confidence: float = Field(..., ge=0.0, le=1.0)
-    reasoning: str
+    reply: str = Field(
+        default="",
+        description=(
+            "Your direct answer to the user. ONLY provide this when route_to is 'inline'. "
+            "Leave empty when routing to rag or eligibility."
+        ),
+    )
+    reasoning: str = Field(..., description="Brief reasoning for this routing decision.")
 
+
+# ─── Field extraction for eligibility intake ──────────────────────────────────
 
 class FieldExtraction(BaseModel):
-    """Extracts unstructured user answers into specific schema fields."""
+    """Extracts unstructured user answers into specific Tier-1 intake schema fields."""
     area_ha: Optional[float] = None
-    tenure_type: Optional[str] = Field(None, description="owned, leased, government, community, disputed, unknown")
+    tenure_type: Optional[str] = Field(
+        None, description="owned | leased | government | community | disputed | unknown"
+    )
     land_legal_class: Optional[str] = None
     existing_tree_cover_pct: Optional[float] = None
     land_use_10yr_ago: Optional[str] = None
@@ -34,34 +59,69 @@ class FieldExtraction(BaseModel):
     lease_years_remaining: Optional[int] = None
     fra_claim_flag: Optional[bool] = None
     grazing_use: Optional[bool] = None
-    
-    # Internal reasoning for transparency
-    extraction_confidence: str = Field(..., description="high, medium, low")
-    assumptions_made: Optional[str] = Field(None, description="Any assumptions made during extraction")
+    location_state: Optional[str] = None
 
+    # Internal reasoning for transparency
+    extraction_confidence: str = Field(..., description="high | medium | low")
+    assumptions_made: Optional[str] = Field(
+        None, description="Any assumptions made during extraction"
+    )
+
+
+# ─── Verdict explanation ───────────────────────────────────────────────────────
 
 class ExplainOutput(BaseModel):
     """
-    Plain English explanation of the verdict, next steps, and missing info.
-    NOTE: The `verdict` field is deliberately excluded here. The LLM must not 
-    decide the verdict, only explain the one provided in its context.
+    Plain-English explanation of the verdict.
+    The LLM must NOT change the verdict — only explain it.
     """
-    explanation: str = Field(..., description="Plain-English explanation of the gate results and verdict.")
-    clarifying_question: Optional[str] = Field(None, description="The single next question to ask, if any.")
-    tone_note: str = Field(..., description="Tone used: 'empathetic', 'direct', or 'cautionary'.")
-    confidence_level: str = Field(..., description="'high', 'medium', or 'low' based on the engine's assessment.")
+    explanation: str = Field(
+        ..., description="Plain-English explanation of the gate results and verdict."
+    )
+    clarifying_question: Optional[str] = Field(
+        None, description="The single next question to ask, if needed (e.g. Tier-2 refinement)."
+    )
+    tone_note: str = Field(
+        ..., description="Tone used: 'empathetic' | 'direct' | 'cautionary'"
+    )
+    confidence_level: str = Field(
+        ..., description="'high' | 'medium' | 'low' based on the engine's assessment."
+    )
 
+
+# ─── Kept for backward compatibility / tests ──────────────────────────────────
 
 class FactualAnswer(BaseModel):
-    """Single-pass RAG factual answer."""
+    """Single-pass RAG factual answer (kept for test compatibility)."""
     answer: str = Field(..., description="The factual answer to the user's question.")
-    source_chunk_ids: List[str] = Field(default_factory=list, description="IDs of the chunks used to answer.")
-    last_verified_date: Optional[str] = Field(None, description="The most recent verification date from the chunks used.")
-    disclaimer: str = Field(..., description="A standard disclaimer that this is educational info, not legal/financial advice.")
+    source_chunk_ids: List[str] = Field(default_factory=list)
+    last_verified_date: Optional[str] = Field(None)
+    disclaimer: str = Field(
+        ..., description="Standard disclaimer — educational info, not legal/financial advice."
+    )
 
 
 class AgenticCriticOutput(BaseModel):
-    """Agentic RAG critic evaluation of retrieved context."""
-    is_grounded: bool = Field(..., description="True if the context fully answers the question, False otherwise.")
-    missing_information: Optional[str] = Field(None, description="What specific information is still missing?")
-    revised_search_query: Optional[str] = Field(None, description="If not grounded, a better search query to try.")
+    """Agentic RAG critic evaluation (kept for test compatibility)."""
+    is_grounded: bool = Field(
+        ..., description="True if context fully answers the question."
+    )
+    missing_information: Optional[str] = Field(None)
+    revised_search_query: Optional[str] = Field(None)
+
+
+# ─── Legacy alias — do not remove (turn_router tests may reference TurnRoute) ──
+
+class TurnRoute(BaseModel):
+    """
+    Legacy router schema. Kept for test compatibility only.
+    New code should use OrchestratorRoute.
+    """
+    route_type: str = Field(
+        ...,
+        description=(
+            "One of: 'rag', 'eligibility', 'out_of_domain'"
+        ),
+    )
+    confidence: float = Field(default=0.8, ge=0.0, le=1.0)
+    reasoning: str = Field(default="")

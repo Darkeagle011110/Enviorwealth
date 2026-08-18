@@ -117,27 +117,39 @@ async def receive_message(request: Request):
 async def process_whatsapp_message(sender_phone: str, text: str):
     try:
         logger.info(f"Invoking orchestrator for {sender_phone}")
-        # Run state graph
-        # For MVP we use the phone number as thread/user ID
+        session_id = f"wa_{sender_phone}"
         initial_state = {
+            "session_id": session_id,
             "user_id": sender_phone,
-            "messages": [("user", text)],
-            "language": "en"
+            "messages": [{"role": "user", "content": text}],
+            "turn_count": 1,
+            "intake_data": {},
+            "missing_fields": [],
+            "rag_citations": [],
+            "web_search_results": [],
+            "rag_sufficient": True,
+            "conversation_summary": "",
+            "route_to": None,
+            "ui_state": {},
+            "screening_started": False,
         }
-        config = {"configurable": {"thread_id": sender_phone}}
-        
-        # Invoke the graph
+        config = {"configurable": {"thread_id": session_id}}
+
         res = await orchestrator_app.ainvoke(initial_state, config=config)
-        
-        # Extract the final message
+
+        # Extract the last assistant message
         final_messages = res.get("messages", [])
-        if final_messages:
-            last_msg = final_messages[-1]
-            if last_msg.type == "ai":
-                reply_text = last_msg.content
-                await send_whatsapp_text(sender_phone, reply_text)
-            else:
-                logger.warning(f"Last message type was {last_msg.type}, not 'ai'.")
+        reply_text = ""
+        for msg in reversed(final_messages):
+            if msg.get("role") == "assistant":
+                reply_text = msg.get("content", "")
+                break
+
+        if reply_text:
+            await send_whatsapp_text(sender_phone, reply_text)
+        else:
+            logger.warning(f"No assistant reply found for {sender_phone}")
     except Exception as e:
         logger.error(f"Error in process_whatsapp_message: {e}")
         await send_whatsapp_text(sender_phone, "Sorry, I encountered an error processing your request.")
+

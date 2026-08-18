@@ -39,21 +39,25 @@ class LLMCaller:
         enriched_system = (
             system_prompt
             + f"\n\nYou MUST return your answer in valid JSON matching the following schema:\n"
-            f"{schema.schema_json()}\n"
+            f"{json.dumps(schema.model_json_schema())}\n"
             f"Do not include markdown code fences or any text before or after the JSON."
         )
 
         last_error = None
         current_prompt = prompt
 
+        from utils.logging_config import TimedOperation
+
         for attempt in range(max_retries + 1):
             try:
-                # C1 FIX: llm_registry.generate() does NOT exist.
-                # The registry exposes generate_with_fallback(system_prompt, user_message).
-                resp = await llm_registry.generate_with_fallback(
-                    system_prompt=enriched_system,
-                    user_message=current_prompt,
-                )
+                with TimedOperation(logger, f"LLM Call (Attempt {attempt + 1})", {"schema": schema.__name__}):
+                    # C1 FIX: llm_registry.generate() does NOT exist.
+                    # The registry exposes generate_with_fallback(system_prompt, user_message).
+                    resp = await llm_registry.generate_with_fallback(
+                        system_prompt=enriched_system,
+                        user_message=current_prompt,
+                    )
+                
                 raw_response = resp.content
 
                 # Strip potential markdown fences and chatty pre-text

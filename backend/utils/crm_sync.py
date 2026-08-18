@@ -41,12 +41,15 @@ async def _sync_with_retry(session_id: str, state_dict: dict, user_id=None, user
     db_session = await db.assessment_sessions.find_one({"session_token": session_id})
     if not db_session:
         from datetime import datetime, timezone
+        # IMPORTANT: user_id MUST be stored as a string (not ObjectId) to match
+        # the query in api/chat.py get_user_sessions which uses str(current_user.id)
+        user_id_str = str(user_id) if user_id is not None else None
         new_session = {
             "session_token": session_id,
-            "user_id": user_id,
+            "user_id": user_id_str,
             "tier": 1,
             "intake_data": state_dict.get("intake_data", {}),
-            "messages": clean_messages,  # ← FIX 4: permanently stored
+            "messages": clean_messages,  # permanently stored
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
         }
@@ -55,14 +58,18 @@ async def _sync_with_retry(session_id: str, state_dict: dict, user_id=None, user
     else:
         session_doc_id = str(db_session.get("_id") or db_session.get("id"))
         from datetime import datetime, timezone
+        update_fields = {
+            "intake_data": state_dict.get("intake_data", {}),
+            "messages": clean_messages,  # ← FIX 4: keep messages in sync
+            "tier": 1,
+            "updated_at": datetime.now(timezone.utc),
+        }
+        # Always sync user_id so sessions created before login get linked
+        if user_id is not None:
+            update_fields["user_id"] = str(user_id)
         await db.assessment_sessions.update_one(
             {"session_token": session_id},
-            {"$set": {
-                "intake_data": state_dict.get("intake_data", {}),
-                "messages": clean_messages,  # ← FIX 4: keep messages in sync
-                "tier": 1,
-                "updated_at": datetime.now(timezone.utc),
-            }}
+            {"$set": update_fields}
         )
 
     # 2. If verdict exists, save Assessment

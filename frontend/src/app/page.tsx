@@ -171,7 +171,7 @@ function ProgressBar({ progress, filledFields, totalFields, currentField }: { pr
 
 function VerdictCard({ memo }: { memo: Memo }) {
   const [openSection, setOpenSection] = useState<string | null>("why");
-  const vm = VERDICT_META[memo.verdict.category] ?? VERDICT_META.insufficient_information;
+  const vm = VERDICT_META[memo.verdict.category?.toLowerCase()] ?? VERDICT_META.insufficient_information;
   const conf = Math.round(memo.verdict.confidence);
 
   const toggle = (sec: string) => setOpenSection(prev => prev === sec ? null : sec);
@@ -876,7 +876,7 @@ export default function Home() {
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
   };
 
-  const isScreening = uiState.stage === "screening";
+  const isScreening = uiState.stage === "screening" && uiState.action !== "SHOW_ELIGIBILITY_MODAL";
   const verdictReady = !!memo;
   const progress = uiState.progress ?? 0;
 
@@ -951,6 +951,15 @@ export default function Home() {
 
               {/* Typing indicator */}
               {isLoading && <TypingIndicator />}
+
+              {/* CTA Button */}
+              {uiState.action === "OFFER_ELIGIBILITY_CHECK" && !isLoading && (
+                <div style={{ display: "flex", justifyContent: "flex-start", marginTop: "12px", marginBottom: "20px", animation: "fadeIn 0.3s ease" }}>
+                  <button suppressHydrationWarning onClick={() => sendMessage("Yes")} style={{ padding: "10px 16px", background: "var(--color-emerald)", color: "#000", border: "none", borderRadius: "var(--radius-sm)", fontWeight: 600, cursor: "pointer", transition: "all 0.2s ease" }}>
+                    Check My Eligibility →
+                  </button>
+                </div>
+              )}
 
               {/* Verdict card */}
               {verdictReady && memo && (

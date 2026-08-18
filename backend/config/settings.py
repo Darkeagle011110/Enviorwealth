@@ -42,8 +42,9 @@ class Settings(BaseSettings):
     qdrant_url: str = "https://your-cluster.qdrant.io"
     qdrant_api_key: str = ""
     qdrant_collection_name: str = "knowledge_chunks"
-    # Embedding vector dimension — 1536 for text-embedding-3-small (MVP default)
-    qdrant_vector_size: int = 1536
+    # Embedding vector dimension — must match the model below.
+    # BAAI/bge-small-en-v1.5 (fastembed, free, no OpenAI key) produces 384-dim vectors.
+    qdrant_vector_size: int = 384
 
     # ── Admin Auth ────────────────────────────────────────────────────────────
     admin_secret_key: str = "change-me-before-production"
@@ -63,9 +64,13 @@ class Settings(BaseSettings):
     google_api_key: str = ""
 
     # ── Embeddings ────────────────────────────────────────────────────────────
-    embedding_provider: str = "openai"
-    embedding_model: str = "text-embedding-3-small"
-    local_embedding_model: str = "all-MiniLM-L6-v2"
+    # Set to "local" to use fastembed (free, no API key needed).
+    # Set to "openai" to use OpenAI text-embedding-3-small (requires OPENAI_API_KEY).
+    embedding_provider: str = "local"
+    embedding_model: str = "text-embedding-3-small"   # only used when provider=openai
+    # fastembed model — ONNX-based, no PyTorch, works natively on Windows.
+    # Produces 384-dim vectors. Free and runs fully offline.
+    local_embedding_model: str = "BAAI/bge-small-en-v1.5"
 
     # ── Paths ─────────────────────────────────────────────────────────────────
     uploaded_docs_path: str = "/app/uploaded_docs"

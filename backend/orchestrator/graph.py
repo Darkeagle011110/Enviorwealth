@@ -1,122 +1,112 @@
-from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.memory import MemorySaver # We'll use MemorySaver for now, easy to swap to PostgresSaver later
-from orchestrator.state import ConversationState
+"""
+graph.py — LangGraph state machine for the EnviroWealth Carbon Chatbot.
 
-from orchestrator.nodes.greeting_node import greeting_node
-from orchestrator.nodes.screen_node import screen_node
-from orchestrator.nodes.rules_node import rules_node
-from orchestrator.nodes.explain_node import explain_node
-from orchestrator.nodes.general_qa_node import general_qa_node
-from orchestrator.nodes.agentic_loop_node import agentic_loop_node
-from orchestrator.nodes.offer_review_node import offer_review_node
-from orchestrator.nodes.lead_node import lead_node
-from orchestrator.nodes.consult_node import consult_node
-from orchestrator.turn_router import route_turn
+4-agent architecture:
+  ┌─────────────────────────────────────────────────────────────┐
+  │                   ORCHESTRATOR AGENT                        │
+  │  (3-tier routing: keyword → heuristic → LLM fallback)      │
+  │  Handles: greetings, refusals, green credit correction      │
+  └──────┬─────────────────────────┬──────────────────┬────────┘
+         │ route_to="rag"          │ route_to=         │ route_to="end"
+         ▼                         │ "eligibility"     ▼
+  ┌──────────────────┐             │            ┌─────┐
+  │   RAG AGENT      │             ▼            │ END │
+  │  (Qdrant KB +    │  ┌──────────────────────┐│     │
+  │   agentic loop)  │  │  ELIGIBILITY AGENT   ││     │
+  └──────┬───────────┘  │  (form + gates +     ││     │
+         │              │   verdict + lead)     ││     │
+         │ rag_         └──────────────────────┘│     │
+         │ sufficient=                           │     │
+         │ False                                 │     │
+         ▼                                       │     │
+  ┌──────────────────┐                           │     │
+  │ WEB SEARCH AGENT │                           │     │
+  │  (DuckDuckGo)    │                           │     │
+  └──────────────────┘                           └─────┘
+
+Thread ID: Uses session_id (not session_id__turn_N) so MemorySaver
+correctly tracks state across turns.
+"""
+from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.memory import MemorySaver
+import logging
+
+logger = logging.getLogger(__name__)
+
+from orchestrator.state import ConversationState
+from orchestrator.agents.orchestrator_agent import orchestrator_agent
+from orchestrator.agents.rag_agent import rag_agent
+from orchestrator.agents.web_search_agent import web_search_agent
+from orchestrator.agents.eligibility_agent import eligibility_agent
+
 
 def create_orchestrator():
     """
-    Assembles the LangGraph state machine for the Carbon Chatbot.
+    Assembles the 4-agent LangGraph state machine.
     """
     workflow = StateGraph(ConversationState)
-    
-    # Add Nodes
-    workflow.add_node("greeting", greeting_node)
-    workflow.add_node("router", route_turn)
-    workflow.add_node("tier1_screen", screen_node)
-    workflow.add_node("tier1_rules", rules_node)
-    workflow.add_node("explain_verdict", explain_node)
-    workflow.add_node("lead_scoring", lead_node)
-    workflow.add_node("general_qa", general_qa_node)
-    workflow.add_node("edge_case", agentic_loop_node)
-    workflow.add_node("offer_review", offer_review_node)
-    workflow.add_node("consult", consult_node)
-    
-    # Define entry point logic
-    def entry_logic(state: ConversationState):
-        if not state.get("messages"):
-            return "greeting"
-        return "router"
-        
-    workflow.set_conditional_entry_point(
-        entry_logic,
-        {
-            "greeting": "greeting",
-            "router": "router"
-        }
-    )
-    
-    workflow.add_edge("greeting", END)
-    
-    # Routing logic
-    def router_logic(state: ConversationState):
-        route = state.get("route_type")
-        screening_started = state.get("screening_started", False)
 
-        if route == "start_screening":
-            # Explicitly flag that screening has now started
-            state["screening_started"] = True
-            return "tier1_screen"
-        elif route in ("scepticism_handling", "green_credit_correction",
-                       "out_of_scope_legal", "out_of_scope_guarantee"):
-            return END
-        elif route == "consult":
-            return "consult"
-        elif route == "factual_question":
-            return "general_qa"
-        elif route == "offer_review":
-            return "offer_review"
-        elif route == "edge_case":
-            return "edge_case"
-        elif route == "intake_answer" and screening_started:
-            return "tier1_screen"
+    # ── Register the 4 agents as nodes ───────────────────────────────────────
+    workflow.add_node("orchestrator", orchestrator_agent)
+    workflow.add_node("rag", rag_agent)
+    workflow.add_node("web_search", web_search_agent)
+    workflow.add_node("eligibility", eligibility_agent)
+
+    # ── Entry point: always start at the orchestrator ──────────────────────────
+    workflow.set_entry_point("orchestrator")
+
+    # ── Orchestrator → downstream routing ─────────────────────────────────────
+    def orchestrator_to_agent(state: ConversationState) -> str:
+        """Route from orchestrator to the appropriate agent."""
+        route = state.get("route_to", "end")
+        if route == "rag":
+            logger.info(f"[GRAPH] Edge: Orchestrator ──────> RAG Agent")
+            return "rag"
+        elif route == "eligibility":
+            logger.info(f"[GRAPH] Edge: Orchestrator ──────> Eligibility Agent")
+            return "eligibility"
         else:
-            # Fallback — treat as consult if screening not started
-            return "consult"
+            logger.info(f"[GRAPH] Edge: Orchestrator ──────> END (Inline reply)")
+            return END  # "end" — orchestrator replied inline
 
     workflow.add_conditional_edges(
-        "router",
-        router_logic,
+        "orchestrator",
+        orchestrator_to_agent,
         {
-            "general_qa": "general_qa",
-            "offer_review": "offer_review",
-            "edge_case": "edge_case",
-            "tier1_screen": "tier1_screen",
-            "consult": "consult",
-            END: END
-        }
+            "rag": "rag",
+            "eligibility": "eligibility",
+            END: END,
+        },
     )
 
-    
-    # Screen Node Logic
-    def screen_logic(state: ConversationState):
-        if state.get("route_type") == "ready_for_verdict":
-            return "tier1_rules"
+    # ── RAG → web search cascade ───────────────────────────────────────────────
+    def rag_to_next(state: ConversationState) -> str:
+        """If RAG was insufficient, cascade to web search. Otherwise END."""
+        if not state.get("rag_sufficient", True):
+            logger.info(f"[GRAPH] Edge: RAG Agent ──────> Web Search Agent (Fallback)")
+            return "web_search"
+        logger.info(f"[GRAPH] Edge: RAG Agent ──────> END")
         return END
-        
+
     workflow.add_conditional_edges(
-        "tier1_screen",
-        screen_logic,
+        "rag",
+        rag_to_next,
         {
-            "tier1_rules": "tier1_rules",
-            END: END
-        }
+            "web_search": "web_search",
+            END: END,
+        },
     )
-    
-    # Verdict Pipeline
-    workflow.add_edge("tier1_rules", "explain_verdict")
-    workflow.add_edge("explain_verdict", "lead_scoring")
-    workflow.add_edge("lead_scoring", END)
-    
-    # Other sinks
-    workflow.add_edge("general_qa", END)
-    workflow.add_edge("edge_case", END)
-    workflow.add_edge("offer_review", END)
-    workflow.add_edge("consult", END)
-    
-    # Memory for durable checkpointing (in-memory for local dev MVP)
+
+    # ── All other agents → END ────────────────────────────────────────────────
+    workflow.add_edge("web_search", END)
+    workflow.add_edge("eligibility", END)
+
+    # ── Persistent checkpointing ───────────────────────────────────────────────
+    # MemorySaver for local dev — swap for PostgresSaver in production
     checkpointer = MemorySaver()
-    
+
     return workflow.compile(checkpointer=checkpointer)
 
-# Singleton instance
+
+# ── Singleton ──────────────────────────────────────────────────────────────────
 orchestrator_app = create_orchestrator()

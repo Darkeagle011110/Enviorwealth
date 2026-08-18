@@ -80,9 +80,13 @@ async def chat_endpoint(request: ChatRequest, req: Request, current_user: Option
             "intake_data": {},
             "missing_fields": [],
             "rag_citations": [],
-            "agentic_loop_count": 0,
+            "web_search_results": [],
+            "rag_sufficient": True,
+            "conversation_summary": "",
+            "route_to": None,
             "ui_state": {},
             "screening_started": False,
+            "awaiting_eligibility_confirm": False,
         }
     else:
         initial_state = await session_manager.get_session(session_id)
@@ -95,10 +99,21 @@ async def chat_endpoint(request: ChatRequest, req: Request, current_user: Option
                 "intake_data": {},
                 "missing_fields": [],
                 "rag_citations": [],
-                "agentic_loop_count": 0,
+                "web_search_results": [],
+                "rag_sufficient": True,
+                "conversation_summary": "",
+                "route_to": None,
                 "ui_state": {},
                 "screening_started": False,
+                "awaiting_eligibility_confirm": False,
             }
+        else:
+            # Ensure new fields are present when loading an old session
+            initial_state.setdefault("web_search_results", [])
+            initial_state.setdefault("rag_sufficient", True)
+            initial_state.setdefault("conversation_summary", "")
+            initial_state.setdefault("route_to", None)
+            initial_state.setdefault("awaiting_eligibility_confirm", False)
 
     if current_user:
         initial_state["user_id"] = str(current_user.id)
@@ -108,12 +123,14 @@ async def chat_endpoint(request: ChatRequest, req: Request, current_user: Option
 
     initial_state["messages"].append({"role": "user", "content": request.message})
     initial_state["turn_count"] = initial_state.get("turn_count", 0) + 1
-    turn_thread_id = f"{session_id}__turn_{initial_state['turn_count']}"
 
+    # FIX: Use session_id as thread_id (not session_id__turn_N)
+    # Using the same thread_id across turns allows MemorySaver to checkpoint
+    # correctly and maintains state continuity across the conversation.
     try:
         final_state = await orchestrator_app.ainvoke(
             initial_state,
-            config={"configurable": {"thread_id": turn_thread_id}},
+            config={"configurable": {"thread_id": session_id}},
         )
 
     except Exception as e:
@@ -162,23 +179,37 @@ class SessionHistoryResponse(BaseModel):
 @router.get("/user/sessions", response_model=List[SessionHistoryResponse])
 async def get_user_sessions(current_user: ClientUserDoc = Depends(get_current_client_user), db: AsyncIOMotorDatabase = Depends(get_db)):
     """Fetch all chat sessions for the logged in user."""
-    sessions_cursor = db.assessment_sessions.find({"user_id": current_user.id}).sort("created_at", -1)
+    # FIX: Query with str(id) to match the string format stored by crm_sync.py
+    # Previously used current_user.id (ObjectId) which never matched the stored string.
+    sessions_cursor = db.assessment_sessions.find({"user_id": str(current_user.id)}).sort("created_at", -1)
     sessions = await sessions_cursor.to_list(length=None)
     
     result = []
     for s in sessions:
-        preview = "New Assessment"
-        intake_data = s.get("intake_data", {})
-        if intake_data and isinstance(intake_data, dict):
-             if "area_ha" in intake_data:
-                 preview = f"Assessment - {intake_data['area_ha']} ha"
-        
+        intake_data = s.get("intake_data", {}) or {}
         created_at = s.get("created_at")
-        
+
+        # Build a human-friendly preview line
+        parts = []
+        area = intake_data.get("area_ha")
+        state = intake_data.get("location_state") or intake_data.get("state")
+        district = intake_data.get("location_district") or intake_data.get("district")
+
+        if area:
+            parts.append(f"{area} ha")
+        if district:
+            parts.append(district)
+        elif state:
+            parts.append(state)
+        if created_at:
+            parts.append(created_at.strftime("%d %b %Y"))
+
+        preview = " · ".join(parts) if parts else "Assessment"
+
         result.append(SessionHistoryResponse(
             session_id=s.get("session_token", ""),
             created_at=created_at.isoformat() if created_at else "",
-            preview=preview
+            preview=preview,
         ))
     return result
 
@@ -204,7 +235,7 @@ async def get_session_detail(
     # Verify the session belongs to this user
     db_session = await db.assessment_sessions.find_one({
         "session_token": session_id,
-        "user_id": current_user.id,
+        "user_id": str(current_user.id),  # stored as string by crm_sync
     })
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
