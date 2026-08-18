@@ -20,6 +20,7 @@ from qdrant_client.http.models import (
     Distance,
     VectorParams,
     HnswConfigDiff,
+    PayloadSchemaType,
 )
 
 from config.settings import settings
@@ -105,7 +106,15 @@ async def ensure_collection():
             ef_construct=100,  # size of dynamic candidate list during indexing
         ),
     )
+    
+    # Create payload index for the boolean 'is_active' filter
+    await client.create_payload_index(
+        collection_name=collection_name,
+        field_name="is_active",
+        field_schema=PayloadSchemaType.BOOL,
+    )
+    
     logger.info(
         f"Created Qdrant collection '{collection_name}' "
-        f"(size={vector_size}, distance=COSINE)."
+        f"(size={vector_size}, distance=COSINE) and payload indices."
     )

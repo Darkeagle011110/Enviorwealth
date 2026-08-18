@@ -39,7 +39,7 @@ async def main():
     from config.settings import settings
     from models.mongodb import get_database
     from models.qdrant_client import get_async_qdrant
-    from qdrant_client.http.models import VectorParams, Distance, HnswConfigDiff, PointStruct
+    from qdrant_client.http.models import VectorParams, Distance, HnswConfigDiff, PointStruct, PayloadSchemaType
 
     logger.info("=" * 60)
     logger.info("Qdrant Re-indexing Script")
@@ -72,7 +72,12 @@ async def main():
         ),
         hnsw_config=HnswConfigDiff(m=16, ef_construct=100),
     )
-    logger.info(f"  ✅ Collection created.")
+    await qdrant.create_payload_index(
+        collection_name=collection_name,
+        field_name="is_active",
+        field_schema=PayloadSchemaType.BOOL,
+    )
+    logger.info(f"  ✅ Collection created with payload indices.")
 
     # ── Step 3: Load all chunks from MongoDB ──────────────────────────────────
     logger.info("Step 3/4 — Loading all knowledge chunks from MongoDB...")
