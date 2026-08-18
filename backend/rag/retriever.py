@@ -90,24 +90,42 @@ class Retriever:
 
         try:
             qdrant = get_async_qdrant()
-            
-            with TimedOperation(logger, "Qdrant Vector Search", {"query": query[:50]}):
-                # query_points() is the v1.13+ replacement for the removed .search()
-                query_result = await qdrant.query_points(
-                    collection_name=settings.qdrant_collection_name,
-                    query=embedding,
-                    limit=top_k,
-                    query_filter=Filter(
-                        must=[
-                            FieldCondition(
-                                key="is_active",
-                                match=MatchValue(value=True)
-                            )
-                        ]
-                    ),
-                    with_payload=True,
-                )
-                results = query_result.points
+
+            try:
+                with TimedOperation(logger, "Qdrant Vector Search", {"query": query[:50]}):
+                    # query_points() is the v1.13+ replacement for the removed .search()
+                    query_result = await qdrant.query_points(
+                        collection_name=settings.qdrant_collection_name,
+                        query=embedding,
+                        limit=top_k,
+                        query_filter=Filter(
+                            must=[
+                                FieldCondition(
+                                    key="is_active",
+                                    match=MatchValue(value=True)
+                                )
+                            ]
+                        ),
+                        with_payload=True,
+                    )
+                    results = query_result.points
+            except Exception as filter_err:
+                # Graceful fallback: if is_active payload index is missing (400),
+                # retry without the filter so results still flow through.
+                if "is_active" in str(filter_err) or "400" in str(filter_err):
+                    logger.warning(
+                        "Qdrant 'is_active' index missing — retrying without filter. "
+                        "Index will be created at next startup."
+                    )
+                    query_result = await qdrant.query_points(
+                        collection_name=settings.qdrant_collection_name,
+                        query=embedding,
+                        limit=top_k,
+                        with_payload=True,
+                    )
+                    results = query_result.points
+                else:
+                    raise
             
             chunks = []
             for hit in results:

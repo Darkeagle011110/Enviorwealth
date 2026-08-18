@@ -66,7 +66,8 @@ async def close_qdrant():
 
 async def ensure_collection():
     """
-    Idempotently ensure the Qdrant collection exists with correct config.
+    Idempotently ensure the Qdrant collection exists with correct config
+    AND that all required payload indexes exist.
     Called once at app startup.
 
     Uses HNSW approximate nearest-neighbour index with cosine similarity.
@@ -75,6 +76,7 @@ async def ensure_collection():
     client = get_async_qdrant()
     collection_name = settings.qdrant_collection_name
     vector_size = settings.qdrant_vector_size
+    collection_existed = False
 
     try:
         existing = await client.get_collection(collection_name)
@@ -90,31 +92,37 @@ async def ensure_collection():
                 f"Qdrant collection '{collection_name}' already exists "
                 f"(size={existing_size}). Skipping creation."
             )
-        return
+        collection_existed = True
     except Exception:
         # Collection does not exist — create it
         pass
 
-    await client.create_collection(
-        collection_name=collection_name,
-        vectors_config=VectorParams(
-            size=vector_size,
-            distance=Distance.COSINE,
-        ),
-        hnsw_config=HnswConfigDiff(
-            m=16,              # number of edges per node (higher = more accurate)
-            ef_construct=100,  # size of dynamic candidate list during indexing
-        ),
-    )
-    
-    # Create payload index for the boolean 'is_active' filter
-    await client.create_payload_index(
-        collection_name=collection_name,
-        field_name="is_active",
-        field_schema=PayloadSchemaType.BOOL,
-    )
-    
-    logger.info(
-        f"Created Qdrant collection '{collection_name}' "
-        f"(size={vector_size}, distance=COSINE) and payload indices."
-    )
+    if not collection_existed:
+        await client.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(
+                size=vector_size,
+                distance=Distance.COSINE,
+            ),
+            hnsw_config=HnswConfigDiff(
+                m=16,              # number of edges per node (higher = more accurate)
+                ef_construct=100,  # size of dynamic candidate list during indexing
+            ),
+        )
+        logger.info(
+            f"Created Qdrant collection '{collection_name}' "
+            f"(size={vector_size}, distance=COSINE)."
+        )
+
+    # Always ensure payload indexes exist — idempotent, safe to run even if
+    # index already exists. Fixes existing collections that pre-date this code.
+    try:
+        await client.create_payload_index(
+            collection_name=collection_name,
+            field_name="is_active",
+            field_schema=PayloadSchemaType.BOOL,
+        )
+        logger.info(f"Qdrant payload index ensured: 'is_active' (BOOL).")
+    except Exception as e:
+        # Index may already exist — not a fatal error
+        logger.debug(f"Payload index 'is_active' already exists or could not be created: {e}")
