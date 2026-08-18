@@ -186,22 +186,49 @@ _LEGAL_CLASS_ALIASES = {
     "coastal": "coastal", "mangrove": "coastal",
 }
 _PLANTING_STATUS_ALIASES = {
+    # Exact admin form labels (lowercase)
+    "not started yet": "not_started",
+    "planning to plant this year": "planned_this_year",
+    "planted within the last 2 years": "planted_lt_2yrs",
+    "planted within the last 2-5 years": "planted_2_5yrs",
+    "planted more than 5 years ago": "planted_gt_5yrs",
+    # Variants
     "not started": "not_started", "not yet": "not_started",
     "planning": "planned_this_year", "plan to plant": "planned_this_year",
-    "planning to plant this year": "planned_this_year",
     "planted recently": "planted_lt_2yrs", "just planted": "planted_lt_2yrs",
     "planted < 2 years ago": "planted_lt_2yrs",
     "planted 2-5 years": "planted_2_5yrs", "2 to 5 years ago": "planted_2_5yrs",
-    "planted 2-5 years ago": "planted_2_5yrs",
+    "planted 2-5 years ago": "planted_2_5yrs", "planted in last 2-5 years": "planted_2_5yrs",
     "more than 5 years": "planted_gt_5yrs", "old plantation": "planted_gt_5yrs",
     "planted > 5 years ago": "planted_gt_5yrs",
 }
+
+
+def _fuzzy_planting_status(v: str) -> str:
+    """Fuzzy-match a planting_status label to its enum value by checking key tokens."""
+    # Check explicit alias map first
+    mapped = _PLANTING_STATUS_ALIASES.get(v, None)
+    if mapped:
+        return mapped
+    # Token-based fallback — avoids breaking on minor wording changes from admin panel
+    if "not start" in v or v in ("no", "none"):
+        return "not_started"
+    if "this year" in v or ("plan" in v and "2" not in v and "5" not in v):
+        return "planned_this_year"
+    if "2-5" in v or "2 to 5" in v or "last 2-5" in v:
+        return "planted_2_5yrs"
+    if ("2 year" in v or "< 2" in v or "last 2 year" in v or "within the last 2 years" in v) and "5" not in v:
+        return "planted_lt_2yrs"
+    if "5" in v and ("more" in v or ">" in v or "old" in v or "gt" in v):
+        return "planted_gt_5yrs"
+    return v  # pass through to Pydantic — will raise a clear validation error
 
 
 def _normalize_intake_fields(raw: dict) -> dict:
     """
     Maps arbitrary admin-form field_ids to canonical Tier1Intake field names.
     Also normalises common enum aliases so values are accepted by the Pydantic model.
+    Uses fuzzy token matching for planting_status to be resilient to admin label changes.
     """
     normalized: dict = {}
     for k, v in raw.items():
@@ -214,7 +241,7 @@ def _normalize_intake_fields(raw: dict) -> dict:
             elif canonical_key == "land_legal_class":
                 v = _LEGAL_CLASS_ALIASES.get(v_lower, v_lower)
             elif canonical_key == "planting_status":
-                v = _PLANTING_STATUS_ALIASES.get(v_lower, v_lower)
+                v = _fuzzy_planting_status(v_lower)
             elif canonical_key == "would_plant_anyway":
                 # Normalise yes/no/true/false strings to bool
                 v = v_lower in ("yes", "true", "1", "y")
